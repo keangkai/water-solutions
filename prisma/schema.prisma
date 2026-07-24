@@ -1,0 +1,119 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum PartnerType {
+  SUPPLIER
+  CUSTOMER
+}
+
+enum MovementType {
+  IN
+  OUT
+}
+
+model Brand {
+  id        String    @id @default(cuid())
+  name      String
+  products  Product[]
+  createdAt DateTime  @default(now())
+}
+
+model Product {
+  id           String           @id @default(cuid())
+  name         String
+  unit         String // เช่น ถัง 20L, แพ็ค 12 ขวด
+  size         String? // เช่น 1.5L, 600ml, 350ml ใช้จัดกลุ่มข้ามยี่ห้อ
+  brand        Brand?           @relation(fields: [brandId], references: [id])
+  brandId      String?
+  defaultCostPrice Float? // ราคาต้นทุนต่อแพ็คที่ใช้ตั้งต้นในฟอร์มรับเข้า
+  defaultSellPrice Float? // ราคาขายต่อแพ็คที่ใช้ตั้งต้นในฟอร์มขายออก
+  reorderPoint Int              @default(0) // แจ้งเตือนเมื่อสต็อกต่ำกว่านี้
+  movementLines MovementLine[]
+  stockCounts  StockCount[]
+  createdAt    DateTime         @default(now())
+}
+
+model Partner {
+  id        String     @id @default(cuid())
+  name      String
+  type      PartnerType
+  phone     String?
+  address   String?
+  movements Movement[]
+  createdAt DateTime   @default(now())
+}
+
+model Warehouse {
+  id          String       @id @default(cuid())
+  name        String // เช่น บ้านแม่, บ้านย่า
+  movements   Movement[]
+  stockCounts StockCount[]
+  createdAt   DateTime     @default(now())
+}
+
+// ใบรับเข้า/ขายออก 1 ใบ มีได้หลายสินค้า (multi-line) เหมือนใบสั่งซื้อ
+model Movement {
+  id          String         @id @default(cuid())
+  type        MovementType
+  partner     Partner        @relation(fields: [partnerId], references: [id])
+  partnerId   String
+  warehouse   Warehouse      @relation(fields: [warehouseId], references: [id])
+  warehouseId String
+  note        String?
+  date        DateTime       @default(now())
+  lines       MovementLine[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+// รายการสินค้าย่อยในใบรับเข้า/ขายออก
+model MovementLine {
+  id         String   @id @default(cuid())
+  movement   Movement @relation(fields: [movementId], references: [id], onDelete: Cascade)
+  movementId String
+  product    Product  @relation(fields: [productId], references: [id])
+  productId  String
+  quantity   Int
+  unitPrice  Float
+}
+
+// ค่าใช้จ่ายดำเนินงาน เช่น ค่าเช่า ค่าน้ำมัน ค่าแรง ใช้หักจากกำไรขั้นต้นเพื่อหากำไรสุทธิ
+model Expense {
+  id        String   @id @default(cuid())
+  category  String
+  amount    Float
+  date      DateTime @default(now())
+  note      String?
+  createdAt DateTime @default(now())
+}
+
+// บันทึกผลนับสต็อกจริงตามรอบ (เช่น รอบ 13 มิ.ย.) แยกตามคลังและขนาดน้ำ
+model StockCount {
+  id          String           @id @default(cuid())
+  date        DateTime
+  warehouse   Warehouse        @relation(fields: [warehouseId], references: [id])
+  warehouseId String
+  product     Product          @relation(fields: [productId], references: [id])
+  productId   String
+  note        String?
+  lines       StockCountLine[]
+  createdAt   DateTime         @default(now())
+}
+
+// รายการย่อยของการนับ เช่น "พาเลซใหญ่" 162, "กระดาษใหญ่" 36 ตามลักษณะการจัดเก็บจริง
+model StockCountLine {
+  id           String     @id @default(cuid())
+  stockCount   StockCount @relation(fields: [stockCountId], references: [id], onDelete: Cascade)
+  stockCountId String
+  label        String
+  quantity     Int
+}

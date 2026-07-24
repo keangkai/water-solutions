@@ -1,65 +1,103 @@
-import Image from "next/image";
+import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import {
+  Package,
+  Users,
+  ArrowLeftRight,
+  BarChart3,
+  AlertTriangle,
+  Wallet,
+} from "lucide-react";
 
-export default function Home() {
+export default async function Home() {
+  const [productCount, partnerCount, products, movements] = await Promise.all([
+    prisma.product.count(),
+    prisma.partner.count(),
+    prisma.product.findMany(),
+    prisma.movement.findMany({ include: { lines: true } }),
+  ]);
+
+  // กระจาย lines ของแต่ละใบให้พกพา type ของ movement ติดไปด้วย เพื่อคำนวณต่อสินค้าเหมือนเดิม
+  const movementLines = movements.flatMap((m) => m.lines.map((l) => ({ ...l, type: m.type })));
+
+  let totalProfit = 0;
+  let lowStockCount = 0;
+
+  for (const product of products) {
+    const productLines = movementLines.filter((l) => l.productId === product.id);
+    const qtyIn = productLines.filter((l) => l.type === "IN").reduce((s, l) => s + l.quantity, 0);
+    const qtyOut = productLines.filter((l) => l.type === "OUT").reduce((s, l) => s + l.quantity, 0);
+    const costIn = productLines.filter((l) => l.type === "IN").reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+    const revenue = productLines.filter((l) => l.type === "OUT").reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+
+    // หักต้นทุนเฉพาะของที่ขายไปแล้ว (เฉลี่ยถ่วงน้ำหนัก) ไม่เอาต้นทุนของสต็อกที่ยังขายไม่ออกมาหัก
+    const avgCost = qtyIn > 0 ? costIn / qtyIn : 0;
+    totalProfit += revenue - avgCost * qtyOut;
+
+    if (qtyIn - qtyOut < product.reorderPoint) lowStockCount += 1;
+  }
+
+  const profit = totalProfit;
+
+  const stats = [
+    { label: "สินค้าทั้งหมด", value: productCount, icon: Package, color: "text-sky-600 bg-sky-50" },
+    { label: "คู่ค้าทั้งหมด", value: partnerCount, icon: Users, color: "text-violet-600 bg-violet-50" },
+    {
+      label: "สต็อกต่ำกว่าจุดแจ้งเตือน",
+      value: lowStockCount,
+      icon: AlertTriangle,
+      color: lowStockCount > 0 ? "text-red-600 bg-red-50" : "text-slate-500 bg-slate-100",
+    },
+    {
+      label: "กำไรที่แท้จริง",
+      value: profit.toLocaleString(),
+      icon: Wallet,
+      color: profit >= 0 ? "text-emerald-600 bg-emerald-50" : "text-red-600 bg-red-50",
+    },
+  ];
+
+  const cards = [
+    { href: "/products", title: "สินค้า", desc: "จัดการรายการสินค้าและจุดแจ้งเตือนสต็อกต่ำ", icon: Package },
+    { href: "/partners", title: "คู่ค้า", desc: "ซัพพลายเออร์และลูกค้า", icon: Users },
+    { href: "/movements", title: "รับเข้า/ขายออก", desc: "บันทึกรายการซื้อ-ขาย", icon: ArrowLeftRight },
+    { href: "/reports", title: "รายงาน", desc: "กำไรรวมและแจ้งเตือนสต็อกต่ำ", icon: BarChart3 },
+  ];
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="space-y-10">
+      <div>
+        <h1 className="text-2xl font-semibold text-slate-900">ภาพรวมธุรกิจ</h1>
+        <p className="text-slate-500 mt-1">สรุปสถานะสต็อกและกำไรของคุณ ณ ตอนนี้</p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {stats.map((s) => (
+          <div key={s.label} className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
+            <div className={`inline-flex items-center justify-center rounded-lg p-2 ${s.color}`}>
+              <s.icon className="size-5" />
+            </div>
+            <div className="mt-3 text-2xl font-semibold text-slate-900">{s.value}</div>
+            <div className="text-sm text-slate-500">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div>
+        <h2 className="text-sm font-medium text-slate-500 mb-3">เมนูลัด</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {cards.map((c) => (
+            <Link
+              key={c.href}
+              href={c.href}
+              className="group bg-white border border-slate-200 rounded-xl p-5 hover:border-sky-300 hover:shadow-md transition"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              <c.icon className="size-5 text-slate-400 group-hover:text-sky-500 transition-colors" />
+              <div className="font-medium text-slate-900 mt-3">{c.title}</div>
+              <div className="text-sm text-slate-500 mt-1">{c.desc}</div>
+            </Link>
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }
