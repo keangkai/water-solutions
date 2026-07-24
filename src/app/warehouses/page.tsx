@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { createWarehouse, deleteWarehouse } from "./actions";
 import { Warehouse, Trash2, Plus } from "lucide-react";

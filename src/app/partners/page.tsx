@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { createPartner } from "./actions";
 import { PartnerCard } from "./partner-card";

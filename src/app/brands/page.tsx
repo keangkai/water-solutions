@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { createBrand, deleteBrand } from "./actions";
 import { Tag, Trash2, Plus } from "lucide-react";

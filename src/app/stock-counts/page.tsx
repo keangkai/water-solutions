@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { deleteStockCount } from "./actions";
 import { StockCountForm } from "./stock-count-form";

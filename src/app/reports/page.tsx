@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { BarChart3, TrendingUp, TrendingDown, Wallet, AlertTriangle, Users } from "lucide-react";
 
