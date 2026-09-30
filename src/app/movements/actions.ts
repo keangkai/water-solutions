@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { MovementType } from "@/generated/prisma/client";
+import { MovementType, DeliveryMethod } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 
 function parseLines(formData: FormData) {
@@ -23,6 +23,18 @@ function parseLines(formData: FormData) {
   );
 }
 
+// วิธีรับของเก็บเฉพาะใบขายออก
+function parseDeliveryMethod(formData: FormData, type: MovementType): DeliveryMethod | null {
+  const raw = String(formData.get("deliveryMethod") ?? "");
+  return type === "OUT" && (raw === "DELIVERY" || raw === "PICKUP") ? raw : null;
+}
+
+function revalidateMovementPaths() {
+  revalidatePath("/movements");
+  revalidatePath("/reports");
+  revalidatePath("/customers");
+}
+
 export async function createMovement(formData: FormData) {
   const partnerId = String(formData.get("partnerId") ?? "");
   const warehouseId = String(formData.get("warehouseId") ?? "");
@@ -41,13 +53,13 @@ export async function createMovement(formData: FormData) {
       partnerId,
       warehouseId,
       note,
+      deliveryMethod: parseDeliveryMethod(formData, type),
       ...(dateRaw ? { date: new Date(dateRaw) } : {}),
       lines: { create: lines },
     },
   });
 
-  revalidatePath("/movements");
-  revalidatePath("/reports");
+  revalidateMovementPaths();
 }
 
 export async function updateMovement(id: string, formData: FormData) {
@@ -70,6 +82,7 @@ export async function updateMovement(id: string, formData: FormData) {
         partnerId,
         warehouseId,
         note,
+        deliveryMethod: parseDeliveryMethod(formData, type),
         ...(dateRaw ? { date: new Date(dateRaw) } : {}),
       },
     }),
@@ -79,12 +92,10 @@ export async function updateMovement(id: string, formData: FormData) {
     }),
   ]);
 
-  revalidatePath("/movements");
-  revalidatePath("/reports");
+  revalidateMovementPaths();
 }
 
 export async function deleteMovement(id: string) {
   await prisma.movement.delete({ where: { id } });
-  revalidatePath("/movements");
-  revalidatePath("/reports");
+  revalidateMovementPaths();
 }

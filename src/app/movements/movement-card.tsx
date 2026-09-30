@@ -5,6 +5,7 @@ import { Pencil, Trash2, ArrowDownToLine, ArrowUpFromLine, Warehouse as Warehous
 import { deleteMovement } from "./actions";
 import { MovementForm } from "./movement-form";
 import { formatDate } from "@/lib/format-date";
+import { deliveryLabel, type DeliveryMethod } from "@/lib/customer-labels";
 
 const typeLabel = { IN: "รับเข้า", OUT: "ขายออก" } as const;
 
@@ -17,6 +18,7 @@ type Movement = {
   partnerId: string;
   warehouseId: string;
   note: string | null;
+  deliveryMethod: DeliveryMethod | null;
   date: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -73,6 +75,7 @@ export function MovementCard({
           <div className="mt-1.5 font-medium text-slate-900">{movement.partner.name}</div>
           <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
             <WarehouseIcon className="size-3" /> {movement.warehouse.name}
+            {movement.deliveryMethod && <span>· {deliveryLabel[movement.deliveryMethod]}</span>}
           </div>
           {movement.note && <div className="text-xs text-slate-400 mt-1">{movement.note}</div>}
         </div>

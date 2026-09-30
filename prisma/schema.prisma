@@ -20,6 +20,25 @@ enum MovementType {
   OUT
 }
 
+enum CustomerSegment {
+  HOUSEHOLD // บ้าน
+  SHOP // ร้านค้า
+  RESTAURANT // ร้านอาหาร
+  OFFICE // ออฟฟิศ
+  FACTORY // โรงงาน
+  OTHER
+}
+
+enum ChannelType {
+  OFFLINE
+  ONLINE
+}
+
+enum DeliveryMethod {
+  DELIVERY // ร้านไปส่งเอง
+  PICKUP // ลูกค้ามารับที่คลัง
+}
+
 model Brand {
   id        String    @id @default(cuid())
   name      String
@@ -48,8 +67,22 @@ model Partner {
   type      PartnerType
   phone     String?
   address   String?
+  segment   CustomerSegment? // ประเภทลูกค้า ใช้กับ CUSTOMER เท่านั้น
+  zone      String? // โซน/ตำบล แยกจากที่อยู่เพื่อใช้จัดกลุ่มในรายงาน
+  source    CustomerSource? @relation(fields: [sourceId], references: [id])
+  sourceId  String? // รู้จักร้านจากช่องทางไหน ว่าง = ไม่ทราบ
   movements Movement[]
   createdAt DateTime   @default(now())
+}
+
+// ช่องทางที่ได้ลูกค้า เช่น บอกต่อ, ใบปลิว เพิ่มเองได้จากหน้าจอเผื่อช่องทางออนไลน์ในอนาคต
+model CustomerSource {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  channel   ChannelType
+  isActive  Boolean     @default(true) // ปิดเพื่อซ่อนจากตัวเลือก โดยไม่กระทบลูกค้าเดิม
+  partners  Partner[]
+  createdAt DateTime    @default(now())
 }
 
 model Warehouse {
@@ -69,6 +102,7 @@ model Movement {
   warehouse   Warehouse      @relation(fields: [warehouseId], references: [id])
   warehouseId String
   note        String?
+  deliveryMethod DeliveryMethod? // ใช้กับใบขายออก ว่าง = ใบเก่าที่ไม่ได้บันทึกไว้
   date        DateTime       @default(now())
   lines       MovementLine[]
   createdAt   DateTime       @default(now())

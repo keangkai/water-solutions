@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Plus, X, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { createMovement, updateMovement } from "./actions";
+import { deliveryLabel, type DeliveryMethod } from "@/lib/customer-labels";
 
 type Product = {
   id: string;
@@ -23,6 +25,7 @@ type InitialMovement = {
   partnerId: string;
   warehouseId: string;
   note: string | null;
+  deliveryMethod: DeliveryMethod | null;
   date: Date;
   lines: { productId: string; quantity: number; unitPrice: number }[];
 };
@@ -89,6 +92,12 @@ export function MovementForm({
   const totalQty = rows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
   const dateDefault = (initialMovement ? initialMovement.date : new Date()).toISOString().slice(0, 10);
 
+  // ใบขายออกเลือกได้เฉพาะลูกค้า (ใบเก่าที่ผูกกับคู่ค้าประเภทอื่นยังแสดงคู่ค้าเดิมไว้)
+  const partnerOptions =
+    type === "OUT"
+      ? partners.filter((p) => p.type === "CUSTOMER" || p.id === initialMovement?.partnerId)
+      : partners;
+
   const action = isEdit ? updateMovement.bind(null, initialMovement!.id) : createMovement;
 
   return (
@@ -149,16 +158,23 @@ export function MovementForm({
           </select>
         </div>
         <div className="flex flex-col gap-1 w-full sm:w-auto">
-          <label className="text-xs font-medium text-slate-500">คู่ค้า</label>
+          <div className="flex items-baseline justify-between gap-3">
+            <label className="text-xs font-medium text-slate-500">{type === "OUT" ? "ลูกค้า" : "คู่ค้า"}</label>
+            {type === "OUT" && (
+              <Link href="/partners" className="text-xs text-sky-600 hover:text-sky-700">
+                {partnerOptions.length === 0 ? "ยังไม่มีลูกค้า เพิ่มลูกค้าก่อน" : "+ ลูกค้าใหม่"}
+              </Link>
+            )}
+          </div>
           <select
             name="partnerId"
             required
             defaultValue={initialMovement?.partnerId}
             className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400"
           >
-            {partners.map((p) => (
+            {partnerOptions.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} ({partnerTypeLabel[p.type]})
+                {type === "OUT" ? p.name : `${p.name} (${partnerTypeLabel[p.type]})`}
               </option>
             ))}
           </select>
@@ -181,6 +197,29 @@ export function MovementForm({
           />
         </div>
       </div>
+
+      {type === "OUT" && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500">การรับของ</span>
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(deliveryLabel) as DeliveryMethod[]).map((method) => (
+              <label
+                key={method}
+                className="inline-flex items-center gap-2 min-h-[44px] px-3 border border-slate-300 rounded-lg text-sm text-black cursor-pointer touch-manipulation has-[:checked]:border-sky-400 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700"
+              >
+                <input
+                  type="radio"
+                  name="deliveryMethod"
+                  value={method}
+                  defaultChecked={isEdit ? initialMovement!.deliveryMethod === method : method === "DELIVERY"}
+                  className="accent-sky-600"
+                />
+                {deliveryLabel[method]}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <div className="text-xs font-medium text-slate-500">สินค้าในใบนี้ (เลือกได้หลายขนาด)</div>

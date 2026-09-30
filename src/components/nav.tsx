@@ -9,6 +9,8 @@ import {
   Package,
   Tag,
   Users,
+  UserSearch,
+  Megaphone,
   Warehouse,
   ArrowLeftRight,
   ClipboardList,
@@ -25,10 +27,12 @@ const navLinks = [
   { href: "/products", label: "สินค้า", icon: Package },
   { href: "/brands", label: "ยี่ห้อ", icon: Tag },
   { href: "/partners", label: "คู่ค้า", icon: Users },
+  { href: "/customer-sources", label: "ช่องทางลูกค้า", icon: Megaphone },
   { href: "/warehouses", label: "คลัง", icon: Warehouse },
   { href: "/movements", label: "รับเข้า/ขายออก", icon: ArrowLeftRight },
   { href: "/stock-counts", label: "นับสต็อก", icon: ClipboardList },
   { href: "/reports", label: "รายงาน", icon: BarChart3 },
+  { href: "/customers", label: "วิเคราะห์ลูกค้า", icon: UserSearch },
   { href: "/finance", label: "การเงิน", icon: Wallet },
 ];
 

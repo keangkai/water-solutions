@@ -3,14 +3,10 @@
 import { useState } from "react";
 import { Pencil, Trash2, Save, X, Phone, MapPin } from "lucide-react";
 import { updatePartner, deletePartner } from "./actions";
+import { PartnerFields, type PartnerValues, type SourceOption } from "./partner-fields";
+import { segmentLabel } from "@/lib/customer-labels";
 
-type Partner = {
-  id: string;
-  name: string;
-  type: "SUPPLIER" | "CUSTOMER";
-  phone: string | null;
-  address: string | null;
-};
+type Partner = PartnerValues & { id: string; source: { name: string } | null };
 
 const typeLabel = { SUPPLIER: "ซัพพลายเออร์", CUSTOMER: "ลูกค้า" } as const;
 const typeBadge = {
@@ -18,7 +14,15 @@ const typeBadge = {
   CUSTOMER: "bg-teal-50 text-teal-700 border-teal-200",
 } as const;
 
-export function PartnerCard({ partner }: { partner: Partner }) {
+export function PartnerCard({
+  partner,
+  sources,
+  zones,
+}: {
+  partner: Partner;
+  sources: SourceOption[];
+  zones: string[];
+}) {
   const [editing, setEditing] = useState(false);
 
   if (!editing) {
@@ -53,7 +57,18 @@ export function PartnerCard({ partner }: { partner: Partner }) {
           )}
           {partner.address && (
             <div className="flex items-center gap-1.5">
-              <MapPin className="size-3.5" /> {partner.address}
+              <MapPin className="size-3.5 shrink-0" /> <span className="whitespace-pre-line">{partner.address}</span>
+            </div>
+          )}
+          {partner.type === "CUSTOMER" && (partner.segment || partner.zone || partner.source) && (
+            <div className="text-xs text-slate-400">
+              {[
+                partner.segment && segmentLabel[partner.segment],
+                partner.zone && `โซน ${partner.zone}`,
+                partner.source && `มาจาก${partner.source.name}`,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
             </div>
           )}
         </div>
@@ -71,45 +86,7 @@ export function PartnerCard({ partner }: { partner: Partner }) {
         className="space-y-3"
       >
         <div className="flex flex-wrap gap-2">
-          <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-            <label className="text-xs font-medium text-slate-500">ชื่อ</label>
-            <input
-              name="name"
-              required
-              defaultValue={partner.name}
-              className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 bg-white"
-            />
-          </div>
-          <div className="flex flex-col gap-1 w-full sm:w-auto">
-            <label className="text-xs font-medium text-slate-500">ประเภท</label>
-            <select
-              name="type"
-              required
-              defaultValue={partner.type}
-              className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 bg-white"
-            >
-              <option value="SUPPLIER">ซัพพลายเออร์</option>
-              <option value="CUSTOMER">ลูกค้า</option>
-            </select>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-            <label className="text-xs font-medium text-slate-500">เบอร์โทร</label>
-            <input
-              name="phone"
-              defaultValue={partner.phone ?? ""}
-              className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 bg-white"
-            />
-          </div>
-          <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
-            <label className="text-xs font-medium text-slate-500">ที่อยู่</label>
-            <input
-              name="address"
-              defaultValue={partner.address ?? ""}
-              className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 bg-white"
-            />
-          </div>
+          <PartnerFields partner={partner} sources={sources} zones={zones} />
         </div>
         <div className="flex items-center gap-2">
           <button className="inline-flex items-center gap-1.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium rounded-lg px-3 py-1.5 transition-colors">
