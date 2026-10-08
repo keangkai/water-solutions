@@ -20,6 +20,7 @@ export type InitialOrder = {
   id: string;
   partnerId: string;
   warehouseId: string;
+  orderDate: Date;
   deliveryDate: Date;
   deliveryRound: string;
   deliveryAddress: string | null;
@@ -98,6 +99,14 @@ export function OrderForm({
               </option>
             ))}
           </select>
+        </div>
+        <div className="flex flex-col gap-1 w-full sm:w-auto">
+          <label className="text-xs font-medium text-slate-500">วันที่สั่ง</label>
+          <DateInput
+            name="orderDate"
+            defaultValue={initialOrder ? initialOrder.orderDate.toISOString().slice(0, 10) : today}
+            className={inputClass}
+          />
         </div>
         <div className="flex flex-col gap-1 w-full sm:w-auto">
           <label className="text-xs font-medium text-slate-500">วันที่ส่ง</label>

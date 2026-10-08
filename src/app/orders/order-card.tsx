@@ -11,6 +11,7 @@ export type OrderCardData = {
   id: string;
   partnerId: string;
   warehouseId: string;
+  orderDate: Date;
   deliveryDate: Date;
   deliveryRound: string;
   deliveryAddress: string | null;
@@ -77,7 +78,7 @@ export function OrderCard({
           <div className="flex flex-wrap items-center gap-2">
             <span className={`text-xs px-2 py-0.5 rounded-full border ${status.badge}`}>{status.label}</span>
             <span className="text-xs text-slate-500">
-              {formatDate(order.deliveryDate)} · รอบ {roundLabel(order.deliveryRound)}
+              สั่ง {formatDate(order.orderDate)} · ส่ง {formatDate(order.deliveryDate)} · รอบ {roundLabel(order.deliveryRound)}
             </span>
           </div>
           <div className="mt-1.5 font-medium text-slate-900">{order.partner.name}</div>

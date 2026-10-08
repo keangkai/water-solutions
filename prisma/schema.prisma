@@ -136,6 +136,7 @@ model Order {
   partnerId       String
   warehouse       Warehouse   @relation(fields: [warehouseId], references: [id])
   warehouseId     String // คลังที่โหลดของขึ้นรถ
+  orderDate       DateTime    @default(now()) // วันที่ลูกค้าสั่ง แก้ย้อนหลังได้ (ต่างจาก createdAt)
   deliveryDate    DateTime
   deliveryRound   String // คีย์รอบจัดส่ง เช่น "08-10" ดูรายการใน lib/delivery.ts
   deliveryAddress String? // ที่อยู่เฉพาะออเดอร์นี้ ว่าง = ใช้ที่อยู่ลูกค้า

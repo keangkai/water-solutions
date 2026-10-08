@@ -46,6 +46,9 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
       <div className="flex items-center gap-2">
         <ClipboardCheck className="size-5 text-sky-500" />
         <h1 className="text-xl font-semibold text-slate-900">ออเดอร์</h1>
+        <Link href="/orders/import" className="ml-auto text-sm text-sky-600 hover:text-sky-700 min-h-[44px] inline-flex items-center">
+          นำเข้าจาก Excel
+        </Link>
       </div>
 
       {canRecord ? (

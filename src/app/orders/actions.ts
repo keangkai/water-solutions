@@ -17,6 +17,7 @@ function parseOrder(formData: FormData) {
   const partnerId = String(formData.get("partnerId") ?? "");
   const warehouseId = String(formData.get("warehouseId") ?? "");
   const deliveryDate = String(formData.get("deliveryDate") ?? "").trim();
+  const orderDateRaw = String(formData.get("orderDate") ?? "").trim();
   const deliveryRound = String(formData.get("deliveryRound") ?? "");
   const deliveryAddress = String(formData.get("deliveryAddress") ?? "").trim() || null;
   const note = String(formData.get("note") ?? "").trim() || null;
@@ -26,7 +27,15 @@ function parseOrder(formData: FormData) {
   if (lines.length === 0) return null;
 
   return {
-    data: { partnerId, warehouseId, deliveryDate: new Date(deliveryDate), deliveryRound, deliveryAddress, note },
+    data: {
+      partnerId,
+      warehouseId,
+      ...(datePattern.test(orderDateRaw) ? { orderDate: new Date(orderDateRaw) } : {}),
+      deliveryDate: new Date(deliveryDate),
+      deliveryRound,
+      deliveryAddress,
+      note,
+    },
     lines,
   };
 }
