@@ -63,6 +63,7 @@ model Product {
   brand            Brand?         @relation(fields: [brandId], references: [id])
   brandId          String?
   orderLines       OrderLine[]
+  transferLines    TransferLine[]
   defaultCostPrice Float? // ราคาต้นทุนต่อแพ็คที่ใช้ตั้งต้นในฟอร์มรับเข้า
   defaultSellPrice Float? // ราคาขายต่อแพ็คที่ใช้ตั้งต้นในฟอร์มขายออก
   reorderPoint     Int            @default(0) // แจ้งเตือนเมื่อสต็อกต่ำกว่านี้
@@ -101,12 +102,14 @@ model CustomerSource {
 }
 
 model Warehouse {
-  id          String       @id @default(cuid())
-  name        String // เช่น บ้านแม่, บ้านย่า
-  movements   Movement[]
-  stockCounts StockCount[]
-  orders      Order[]
-  createdAt   DateTime     @default(now())
+  id           String       @id @default(cuid())
+  name         String // เช่น บ้านแม่, บ้านย่า
+  movements    Movement[]
+  stockCounts  StockCount[]
+  orders       Order[]
+  transfersOut Transfer[]   @relation("TransferFrom")
+  transfersIn  Transfer[]   @relation("TransferTo")
+  createdAt    DateTime     @default(now())
 }
 
 // ใบรับเข้า/ขายออก 1 ใบ มีได้หลายสินค้า (multi-line) เหมือนใบสั่งซื้อ
@@ -168,6 +171,28 @@ model MovementLine {
   productId  String
   quantity   Int
   unitPrice  Float
+}
+
+// โอนย้ายสินค้าระหว่างคลัง ไม่กระทบยอดรับเข้า/ขายออก/กำไร มีผลแค่สต็อกรายคลัง
+model Transfer {
+  id              String         @id @default(cuid())
+  fromWarehouse   Warehouse      @relation("TransferFrom", fields: [fromWarehouseId], references: [id])
+  fromWarehouseId String
+  toWarehouse     Warehouse      @relation("TransferTo", fields: [toWarehouseId], references: [id])
+  toWarehouseId   String
+  date            DateTime       @default(now())
+  note            String?
+  lines           TransferLine[]
+  createdAt       DateTime       @default(now())
+}
+
+model TransferLine {
+  id         String   @id @default(cuid())
+  transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+  transferId String
+  product    Product  @relation(fields: [productId], references: [id])
+  productId  String
+  quantity   Int
 }
 
 // ค่าใช้จ่ายดำเนินงาน เช่น ค่าเช่า ค่าน้ำมัน ค่าแรง ใช้หักจากกำไรขั้นต้นเพื่อหากำไรสุทธิ
