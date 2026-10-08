@@ -1,27 +1,10 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/auth";
 import { MovementType, DeliveryMethod } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
-
-function parseLines(formData: FormData) {
-  const lineMap = new Map<number, { productId?: string; quantity?: number; unitPrice?: number }>();
-  for (const [key, value] of formData.entries()) {
-    const match = key.match(/^lines\.(\d+)\.(productId|quantity|unitPrice)$/);
-    if (!match) continue;
-    const idx = Number(match[1]);
-    const current = lineMap.get(idx) ?? {};
-    if (match[2] === "productId") current.productId = String(value);
-    else if (match[2] === "quantity") current.quantity = Number(value);
-    else current.unitPrice = Number(value);
-    lineMap.set(idx, current);
-  }
-
-  return Array.from(lineMap.values()).filter(
-    (l): l is { productId: string; quantity: number; unitPrice: number } =>
-      !!l.productId && typeof l.quantity === "number" && l.quantity > 0 && typeof l.unitPrice === "number" && l.unitPrice >= 0
-  );
-}
+import { parseLines } from "@/lib/parse-lines";
 
 // วิธีรับของเก็บเฉพาะใบขายออก
 function parseDeliveryMethod(formData: FormData, type: MovementType): DeliveryMethod | null {
@@ -33,9 +16,11 @@ function revalidateMovementPaths() {
   revalidatePath("/movements");
   revalidatePath("/reports");
   revalidatePath("/customers");
+  revalidatePath("/customers/list");
 }
 
 export async function createMovement(formData: FormData) {
+  if (!(await isAdmin())) return;
   const partnerId = String(formData.get("partnerId") ?? "");
   const warehouseId = String(formData.get("warehouseId") ?? "");
   const type = String(formData.get("type") ?? "") as MovementType;
@@ -63,6 +48,7 @@ export async function createMovement(formData: FormData) {
 }
 
 export async function updateMovement(id: string, formData: FormData) {
+  if (!(await isAdmin())) return;
   const partnerId = String(formData.get("partnerId") ?? "");
   const warehouseId = String(formData.get("warehouseId") ?? "");
   const type = String(formData.get("type") ?? "") as MovementType;
@@ -96,6 +82,7 @@ export async function updateMovement(id: string, formData: FormData) {
 }
 
 export async function deleteMovement(id: string) {
+  if (!(await isAdmin())) return;
   await prisma.movement.delete({ where: { id } });
   revalidateMovementPaths();
 }

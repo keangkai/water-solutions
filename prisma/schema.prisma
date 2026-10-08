@@ -22,6 +22,7 @@ enum MovementType {
 
 enum CustomerSegment {
   HOUSEHOLD // บ้าน
+  GROCERY // ร้านชำ
   SHOP // ร้านค้า
   RESTAURANT // ร้านอาหาร
   OFFICE // ออฟฟิศ
@@ -32,6 +33,14 @@ enum CustomerSegment {
 enum ChannelType {
   OFFLINE
   ONLINE
+}
+
+// สถานะออเดอร์ที่ลูกค้ายืนยันแล้ว ก่อนกลายเป็นใบขายออก
+enum OrderStatus {
+  CONFIRMED // ลูกค้ายืนยัน รอส่ง
+  DELIVERED // คนขับส่งแล้ว สร้างใบขายออกแล้ว
+  FAILED // คนขับส่งไม่ได้ รอ admin เลื่อนวันหรือยกเลิก
+  CANCELLED
 }
 
 enum DeliveryMethod {
@@ -47,32 +56,38 @@ model Brand {
 }
 
 model Product {
-  id           String           @id @default(cuid())
-  name         String
-  unit         String // เช่น ถัง 20L, แพ็ค 12 ขวด
-  size         String? // เช่น 1.5L, 600ml, 350ml ใช้จัดกลุ่มข้ามยี่ห้อ
-  brand        Brand?           @relation(fields: [brandId], references: [id])
-  brandId      String?
+  id               String         @id @default(cuid())
+  name             String
+  unit             String // เช่น ถัง 20L, แพ็ค 12 ขวด
+  size             String? // เช่น 1.5L, 600ml, 350ml ใช้จัดกลุ่มข้ามยี่ห้อ
+  brand            Brand?         @relation(fields: [brandId], references: [id])
+  brandId          String?
+  orderLines       OrderLine[]
   defaultCostPrice Float? // ราคาต้นทุนต่อแพ็คที่ใช้ตั้งต้นในฟอร์มรับเข้า
   defaultSellPrice Float? // ราคาขายต่อแพ็คที่ใช้ตั้งต้นในฟอร์มขายออก
-  reorderPoint Int              @default(0) // แจ้งเตือนเมื่อสต็อกต่ำกว่านี้
-  movementLines MovementLine[]
-  stockCounts  StockCount[]
-  createdAt    DateTime         @default(now())
+  reorderPoint     Int            @default(0) // แจ้งเตือนเมื่อสต็อกต่ำกว่านี้
+  movementLines    MovementLine[]
+  stockCounts      StockCount[]
+  createdAt        DateTime       @default(now())
 }
 
 model Partner {
-  id        String     @id @default(cuid())
-  name      String
-  type      PartnerType
-  phone     String?
-  address   String?
-  segment   CustomerSegment? // ประเภทลูกค้า ใช้กับ CUSTOMER เท่านั้น
-  zone      String? // โซน/ตำบล แยกจากที่อยู่เพื่อใช้จัดกลุ่มในรายงาน
-  source    CustomerSource? @relation(fields: [sourceId], references: [id])
-  sourceId  String? // รู้จักร้านจากช่องทางไหน ว่าง = ไม่ทราบ
-  movements Movement[]
-  createdAt DateTime   @default(now())
+  id          String           @id @default(cuid())
+  name        String
+  type        PartnerType
+  companyName String? // ชื่อบริษัท ไม่บังคับ
+  phone       String?
+  address     String?
+  mapUrl      String? // ลิงก์ Google Maps ที่ลูกค้าส่งมา
+  latitude    Float? // พิกัดที่ดึงจากลิงก์ ใช้วิเคราะห์โซนและนำทาง
+  longitude   Float?
+  segment     CustomerSegment? // ประเภทลูกค้า ใช้กับ CUSTOMER เท่านั้น
+  zone        String? // โซน/ตำบล แยกจากที่อยู่เพื่อใช้จัดกลุ่มในรายงาน
+  source      CustomerSource?  @relation(fields: [sourceId], references: [id])
+  sourceId    String? // รู้จักร้านจากช่องทางไหน ว่าง = ไม่ทราบ
+  movements   Movement[]
+  orders      Order[]
+  createdAt   DateTime         @default(now())
 }
 
 // ช่องทางที่ได้ลูกค้า เช่น บอกต่อ, ใบปลิว เพิ่มเองได้จากหน้าจอเผื่อช่องทางออนไลน์ในอนาคต
@@ -90,23 +105,58 @@ model Warehouse {
   name        String // เช่น บ้านแม่, บ้านย่า
   movements   Movement[]
   stockCounts StockCount[]
+  orders      Order[]
   createdAt   DateTime     @default(now())
 }
 
 // ใบรับเข้า/ขายออก 1 ใบ มีได้หลายสินค้า (multi-line) เหมือนใบสั่งซื้อ
 model Movement {
-  id          String         @id @default(cuid())
-  type        MovementType
-  partner     Partner        @relation(fields: [partnerId], references: [id])
-  partnerId   String
-  warehouse   Warehouse      @relation(fields: [warehouseId], references: [id])
-  warehouseId String
-  note        String?
+  id             String          @id @default(cuid())
+  type           MovementType
+  partner        Partner         @relation(fields: [partnerId], references: [id])
+  partnerId      String
+  warehouse      Warehouse       @relation(fields: [warehouseId], references: [id])
+  warehouseId    String
+  note           String?
   deliveryMethod DeliveryMethod? // ใช้กับใบขายออก ว่าง = ใบเก่าที่ไม่ได้บันทึกไว้
-  date        DateTime       @default(now())
-  lines       MovementLine[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  date           DateTime        @default(now())
+  lines          MovementLine[]
+  order          Order? // ออเดอร์ที่สร้างใบนี้ตอนคนขับกดส่งแล้ว
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+}
+
+// ออเดอร์ที่ลูกค้ายืนยันแล้ว ยังไม่ตัดสต็อกจนกว่าคนขับจะส่งสำเร็จ
+model Order {
+  id              String      @id @default(cuid())
+  partner         Partner     @relation(fields: [partnerId], references: [id])
+  partnerId       String
+  warehouse       Warehouse   @relation(fields: [warehouseId], references: [id])
+  warehouseId     String // คลังที่โหลดของขึ้นรถ
+  deliveryDate    DateTime
+  deliveryRound   String // คีย์รอบจัดส่ง เช่น "08-10" ดูรายการใน lib/delivery.ts
+  deliveryAddress String? // ที่อยู่เฉพาะออเดอร์นี้ ว่าง = ใช้ที่อยู่ลูกค้า
+  note            String? // หมายเหตุถึงคนขับ
+  status          OrderStatus @default(CONFIRMED)
+  issueReason     String? // เหตุผลที่ส่งไม่ครบหรือส่งไม่ได้ เช่น แพ็คน้ำแตก
+  deliveredAt     DateTime?
+  paidAt          DateTime? // admin ยืนยันว่าลูกค้าโอนแล้ว
+  movement        Movement?   @relation(fields: [movementId], references: [id], onDelete: SetNull)
+  movementId      String?     @unique
+  lines           OrderLine[]
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+model OrderLine {
+  id                String  @id @default(cuid())
+  order             Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId           String
+  product           Product @relation(fields: [productId], references: [id])
+  productId         String
+  quantity          Int // จำนวนที่ลูกค้าสั่ง คนขับแก้ไม่ได้
+  deliveredQuantity Int? // จำนวนที่ส่งจริง บันทึกตอนส่ง
+  unitPrice         Float
 }
 
 // รายการสินค้าย่อยในใบรับเข้า/ขายออก

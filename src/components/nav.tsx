@@ -10,6 +10,9 @@ import {
   Tag,
   Users,
   UserSearch,
+  Contact,
+  ClipboardCheck,
+  Truck,
   Megaphone,
   Warehouse,
   ArrowLeftRight,
@@ -29,9 +32,12 @@ const navLinks = [
   { href: "/partners", label: "คู่ค้า", icon: Users },
   { href: "/customer-sources", label: "ช่องทางลูกค้า", icon: Megaphone },
   { href: "/warehouses", label: "คลัง", icon: Warehouse },
+  { href: "/orders", label: "ออเดอร์", icon: ClipboardCheck },
+  { href: "/driver", label: "หน้าคนขับ", icon: Truck },
   { href: "/movements", label: "รับเข้า/ขายออก", icon: ArrowLeftRight },
   { href: "/stock-counts", label: "นับสต็อก", icon: ClipboardList },
   { href: "/reports", label: "รายงาน", icon: BarChart3 },
+  { href: "/customers/list", label: "รายชื่อลูกค้า", icon: Contact },
   { href: "/customers", label: "วิเคราะห์ลูกค้า", icon: UserSearch },
   { href: "/finance", label: "การเงิน", icon: Wallet },
 ];
@@ -49,7 +55,8 @@ export function Nav() {
     return () => { document.body.style.overflow = ""; };
   }, [open]);
 
-  if (pathname === "/login") return null;
+  // หน้าคนขับมีหัวของตัวเอง ไม่แสดงเมนูของ admin
+  if (pathname === "/login" || pathname.startsWith("/driver")) return null;
 
   return (
     <>

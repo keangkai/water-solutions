@@ -1,14 +1,17 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/auth";
 import { PartnerType, CustomerSegment } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { segmentLabel } from "@/lib/customer-labels";
+import { coordsFromMapLink } from "@/lib/maps-link";
 
-function parsePartner(formData: FormData) {
+async function parsePartner(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const type = String(formData.get("type") ?? "") as PartnerType;
   const phone = String(formData.get("phone") ?? "").trim() || null;
+  const companyName = String(formData.get("companyName") ?? "").trim() || null;
   const address = String(formData.get("address") ?? "").trim() || null;
 
   if (!name || (type !== "SUPPLIER" && type !== "CUSTOMER")) return null;
@@ -19,18 +22,36 @@ function parsePartner(formData: FormData) {
   const segment = isCustomer && segmentRaw in segmentLabel ? (segmentRaw as CustomerSegment) : null;
   const zone = isCustomer ? String(formData.get("zone") ?? "").trim() || null : null;
   const sourceId = isCustomer ? String(formData.get("sourceId") ?? "") || null : null;
+  const mapUrl = isCustomer ? String(formData.get("mapUrl") ?? "").trim() || null : null;
+  const coords = mapUrl ? await coordsFromMapLink(mapUrl) : null;
 
-  return { name, type, phone, address, segment, zone, sourceId };
+  return {
+    name,
+    type,
+    companyName,
+    phone,
+    address,
+    segment,
+    zone,
+    sourceId,
+    mapUrl,
+    latitude: coords?.latitude ?? null,
+    longitude: coords?.longitude ?? null,
+  };
 }
 
 function revalidatePartnerPaths() {
   revalidatePath("/partners");
   revalidatePath("/movements");
   revalidatePath("/customers");
+  revalidatePath("/customers/list");
+  revalidatePath("/orders");
+  revalidatePath("/driver");
 }
 
 export async function createPartner(formData: FormData) {
-  const data = parsePartner(formData);
+  if (!(await isAdmin())) return;
+  const data = await parsePartner(formData);
   if (!data) return;
 
   await prisma.partner.create({ data });
@@ -39,7 +60,8 @@ export async function createPartner(formData: FormData) {
 }
 
 export async function updatePartner(id: string, formData: FormData) {
-  const data = parsePartner(formData);
+  if (!(await isAdmin())) return;
+  const data = await parsePartner(formData);
   if (!data) return;
 
   await prisma.partner.update({ where: { id }, data });
@@ -48,6 +70,7 @@ export async function updatePartner(id: string, formData: FormData) {
 }
 
 export async function deletePartner(id: string) {
+  if (!(await isAdmin())) return;
   await prisma.partner.delete({ where: { id } });
   revalidatePartnerPaths();
 }

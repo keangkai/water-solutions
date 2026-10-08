@@ -1,7 +1,11 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
+import { getStockSnapshot, totalsByProduct } from "@/lib/stock";
+import { todayInBangkok } from "@/lib/delivery";
 import {
+  Truck,
+  ClipboardCheck,
   Package,
   Users,
   ArrowLeftRight,
@@ -11,12 +15,29 @@ import {
 } from "lucide-react";
 
 export default async function Home() {
-  const [productCount, partnerCount, products, movements] = await Promise.all([
+  const today = todayInBangkok();
+  const [productCount, partnerCount, products, movements, snapshot, openOrders] = await Promise.all([
     prisma.product.count(),
     prisma.partner.count(),
     prisma.product.findMany(),
     prisma.movement.findMany({ include: { lines: true } }),
+    getStockSnapshot(),
+    // ออเดอร์ที่ admin ต้องตามต่อ: ยังไม่ส่ง ส่งไม่ได้ หรือส่งแล้วรอโอน
+    prisma.order.findMany({
+      where: { OR: [{ status: { in: ["CONFIRMED", "FAILED"] } }, { status: "DELIVERED", paidAt: null }] },
+      include: { lines: true },
+    }),
   ]);
+  const onHandTotals = totalsByProduct(snapshot.onHand);
+  const reservedTotals = totalsByProduct(snapshot.reserved);
+
+  const orderValue = (o: (typeof openOrders)[number]) =>
+    o.lines.reduce((sum, l) => sum + (o.status === "DELIVERED" ? (l.deliveredQuantity ?? l.quantity) : l.quantity) * l.unitPrice, 0);
+  const todayOrders = openOrders.filter((o) => o.status === "CONFIRMED" && o.deliveryDate.toISOString().slice(0, 10) === today);
+  const overdueOrders = openOrders.filter((o) => o.status === "CONFIRMED" && o.deliveryDate.toISOString().slice(0, 10) < today);
+  const failedOrders = openOrders.filter((o) => o.status === "FAILED");
+  const unpaidOrders = openOrders.filter((o) => o.status === "DELIVERED");
+  const unpaidTotal = unpaidOrders.reduce((sum, o) => sum + orderValue(o), 0);
 
   // กระจาย lines ของแต่ละใบให้พกพา type ของ movement ติดไปด้วย เพื่อคำนวณต่อสินค้าเหมือนเดิม
   const movementLines = movements.flatMap((m) => m.lines.map((l) => ({ ...l, type: m.type })));
@@ -35,7 +56,9 @@ export default async function Home() {
     const avgCost = qtyIn > 0 ? costIn / qtyIn : 0;
     totalProfit += revenue - avgCost * qtyOut;
 
-    if (qtyIn - qtyOut < product.reorderPoint) lowStockCount += 1;
+    // ขายได้จริง = คงเหลือ − ที่ถูกจองโดยออเดอร์ที่ยังไม่ส่ง
+    const available = (onHandTotals.get(product.id) ?? 0) - (reservedTotals.get(product.id) ?? 0);
+    if (available < product.reorderPoint) lowStockCount += 1;
   }
 
   const profit = totalProfit;
@@ -44,7 +67,7 @@ export default async function Home() {
     { label: "สินค้าทั้งหมด", value: productCount, icon: Package, color: "text-sky-600 bg-sky-50" },
     { label: "คู่ค้าทั้งหมด", value: partnerCount, icon: Users, color: "text-violet-600 bg-violet-50" },
     {
-      label: "สต็อกต่ำกว่าจุดแจ้งเตือน",
+      label: "สต็อกขายได้ต่ำกว่าจุดแจ้งเตือน",
       value: lowStockCount,
       icon: AlertTriangle,
       color: lowStockCount > 0 ? "text-red-600 bg-red-50" : "text-slate-500 bg-slate-100",
@@ -57,7 +80,15 @@ export default async function Home() {
     },
   ];
 
+  const todayCards = [
+    { href: "/driver", label: "รอส่งวันนี้", value: todayOrders.length, tone: todayOrders.length > 0 ? "text-sky-700 bg-sky-50 border-sky-200" : "text-slate-500 bg-white border-slate-200", icon: Truck },
+    { href: "/orders", label: "ค้างส่งจากวันก่อน", value: overdueOrders.length, tone: overdueOrders.length > 0 ? "text-red-700 bg-red-50 border-red-200" : "text-slate-500 bg-white border-slate-200", icon: AlertTriangle },
+    { href: "/orders", label: "ส่งไม่ได้ รอจัดการ", value: failedOrders.length, tone: failedOrders.length > 0 ? "text-red-700 bg-red-50 border-red-200" : "text-slate-500 bg-white border-slate-200", icon: AlertTriangle },
+    { href: "/orders?tab=unpaid", label: `รอโอน ${unpaidTotal.toLocaleString()} บาท`, value: unpaidOrders.length, tone: unpaidOrders.length > 0 ? "text-amber-700 bg-amber-50 border-amber-200" : "text-slate-500 bg-white border-slate-200", icon: Wallet },
+  ];
+
   const cards = [
+    { href: "/orders", title: "ออเดอร์", desc: "รับออเดอร์ลูกค้าและติดตามการส่ง", icon: ClipboardCheck },
     { href: "/products", title: "สินค้า", desc: "จัดการรายการสินค้าและจุดแจ้งเตือนสต็อกต่ำ", icon: Package },
     { href: "/partners", title: "คู่ค้า", desc: "ซัพพลายเออร์และลูกค้า", icon: Users },
     { href: "/movements", title: "รับเข้า/ขายออก", desc: "บันทึกรายการซื้อ-ขาย", icon: ArrowLeftRight },
@@ -69,6 +100,19 @@ export default async function Home() {
       <div>
         <h1 className="text-2xl font-semibold text-slate-900">ภาพรวมธุรกิจ</h1>
         <p className="text-slate-500 mt-1">สรุปสถานะสต็อกและกำไรของคุณ ณ ตอนนี้</p>
+      </div>
+
+      <div>
+        <h2 className="text-sm font-medium text-slate-500 mb-3">งานวันนี้</h2>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          {todayCards.map((c) => (
+            <Link key={c.label} href={c.href} className={`border rounded-xl p-4 shadow-sm hover:shadow-md transition ${c.tone}`}>
+              <c.icon className="size-5" />
+              <div className="mt-3 text-2xl font-semibold">{c.value}</div>
+              <div className="text-sm">{c.label}</div>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -85,7 +129,7 @@ export default async function Home() {
 
       <div>
         <h2 className="text-sm font-medium text-slate-500 mb-3">เมนูลัด</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           {cards.map((c) => (
             <Link
               key={c.href}

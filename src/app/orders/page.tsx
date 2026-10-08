@@ -1,0 +1,100 @@
+export const dynamic = "force-dynamic";
+import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import { OrderForm } from "./order-form";
+import { OrderCard } from "./order-card";
+import { todayInBangkok } from "@/lib/delivery";
+import { ClipboardCheck } from "lucide-react";
+
+const tabs = {
+  pending: { label: "รอส่ง / ส่งไม่ได้", empty: "ไม่มีออเดอร์รอส่ง" },
+  unpaid: { label: "ส่งแล้ว รอโอน", empty: "ไม่มีออเดอร์ที่รอโอน" },
+  done: { label: "โอนแล้ว", empty: "ยังไม่มีออเดอร์ที่โอนแล้ว" },
+  cancelled: { label: "ยกเลิก", empty: "ไม่มีออเดอร์ที่ยกเลิก" },
+} as const;
+type TabKey = keyof typeof tabs;
+
+export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const params = await searchParams;
+  const tab: TabKey = params.tab && params.tab in tabs ? (params.tab as TabKey) : "pending";
+  const today = todayInBangkok();
+
+  const [customers, products, warehouses, orders] = await Promise.all([
+    prisma.partner.findMany({ where: { type: "CUSTOMER" }, orderBy: { name: "asc" } }),
+    prisma.product.findMany({ orderBy: { name: "asc" } }),
+    prisma.warehouse.findMany({ orderBy: { createdAt: "asc" } }),
+    prisma.order.findMany({
+      orderBy: [{ deliveryDate: "asc" }, { deliveryRound: "asc" }, { createdAt: "asc" }],
+      include: { partner: true, warehouse: true, lines: { include: { product: true } } },
+    }),
+  ]);
+
+  const byTab: Record<TabKey, typeof orders> = {
+    pending: orders.filter((o) => o.status === "CONFIRMED" || o.status === "FAILED"),
+    unpaid: orders.filter((o) => o.status === "DELIVERED" && !o.paidAt),
+    // ที่จบแล้วเรียงล่าสุดก่อน
+    done: orders.filter((o) => o.status === "DELIVERED" && o.paidAt).reverse(),
+    cancelled: orders.filter((o) => o.status === "CANCELLED").reverse(),
+  };
+  const visible = byTab[tab];
+  const failedCount = byTab.pending.filter((o) => o.status === "FAILED").length;
+
+  const canRecord = customers.length > 0 && products.length > 0 && warehouses.length > 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <ClipboardCheck className="size-5 text-sky-500" />
+        <h1 className="text-xl font-semibold text-slate-900">ออเดอร์</h1>
+      </div>
+
+      {canRecord ? (
+        <OrderForm customers={customers} products={products} warehouses={warehouses} today={today} />
+      ) : (
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-4">
+          ต้องมีลูกค้า สินค้า และคลัง ก่อนจึงจะบันทึกออเดอร์ได้
+        </div>
+      )}
+
+      {failedCount > 0 && tab !== "pending" && (
+        <Link
+          href="/orders?tab=pending"
+          className="block bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl p-4 hover:bg-red-100 transition-colors"
+        >
+          มี {failedCount.toLocaleString()} ออเดอร์ที่คนขับส่งไม่ได้ ต้องเลื่อนวันส่งหรือยกเลิก
+        </Link>
+      )}
+
+      <div className="flex gap-1 border-b border-slate-200 overflow-x-auto">
+        {(Object.keys(tabs) as TabKey[]).map((key) => (
+          <Link
+            key={key}
+            href={`/orders?tab=${key}`}
+            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm border-b-2 whitespace-nowrap transition-colors ${
+              tab === key
+                ? "border-sky-500 text-sky-600 font-medium"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            {tabs[key].label}
+            <span className="text-xs text-slate-400">{byTab[key].length.toLocaleString()}</span>
+          </Link>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {visible.map((o) => (
+          <OrderCard
+            key={o.id}
+            order={o}
+            customers={customers}
+            products={products}
+            warehouses={warehouses}
+            today={today}
+          />
+        ))}
+        {visible.length === 0 && <div className="col-span-full text-center text-slate-400 py-10">{tabs[tab].empty}</div>}
+      </div>
+    </div>
+  );
+}

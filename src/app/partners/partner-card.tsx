@@ -31,6 +31,7 @@ export function PartnerCard({
         <div className="flex items-start justify-between">
           <div>
             <div className="font-medium text-slate-900">{partner.name}</div>
+            {partner.companyName && <div className="text-xs text-slate-500">{partner.companyName}</div>}
             <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full border ${typeBadge[partner.type]}`}>
               {typeLabel[partner.type]}
             </span>
@@ -59,6 +60,16 @@ export function PartnerCard({
             <div className="flex items-center gap-1.5">
               <MapPin className="size-3.5 shrink-0" /> <span className="whitespace-pre-line">{partner.address}</span>
             </div>
+          )}
+          {partner.mapUrl && (
+            <a
+              href={partner.mapUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-sky-600 hover:text-sky-700"
+            >
+              <MapPin className="size-3.5" /> เปิดแผนที่{partner.latitude == null && " (ยังไม่มีพิกัด)"}
+            </a>
           )}
           {partner.type === "CUSTOMER" && (partner.segment || partner.zone || partner.source) && (
             <div className="text-xs text-slate-400">

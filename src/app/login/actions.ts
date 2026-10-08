@@ -15,12 +15,20 @@ export async function login(_: unknown, formData: FormData) {
     return { error: "ยังไม่ได้ตั้งค่า AUTH environment variables" };
   }
 
-  if (username !== validUsername || password !== validPassword) {
+  // บัญชีคนขับเปิดใช้เมื่อตั้งค่า DRIVER_USERNAME, DRIVER_PASSWORD, DRIVER_SECRET ครบ
+  const driverUsername = process.env.DRIVER_USERNAME;
+  const driverPassword = process.env.DRIVER_PASSWORD;
+  const driverSecret = process.env.DRIVER_SECRET;
+  const isAdmin = username === validUsername && password === validPassword;
+  const isDriver =
+    !!driverUsername && !!driverPassword && !!driverSecret && username === driverUsername && password === driverPassword;
+
+  if (!isAdmin && !isDriver) {
     return { error: "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง" };
   }
 
   const cookieStore = await cookies();
-  cookieStore.set("session", secret, {
+  cookieStore.set("session", isAdmin ? secret : driverSecret!, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
@@ -28,7 +36,7 @@ export async function login(_: unknown, formData: FormData) {
     maxAge: 30 * 24 * 60 * 60,
   });
 
-  redirect("/");
+  redirect(isAdmin ? "/" : "/driver");
 }
 
 export async function logout() {

@@ -1,5 +1,6 @@
 export const segmentLabel = {
   HOUSEHOLD: "บ้าน",
+  GROCERY: "ร้านชำ",
   SHOP: "ร้านค้า",
   RESTAURANT: "ร้านอาหาร",
   OFFICE: "ออฟฟิศ",

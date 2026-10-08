@@ -1,9 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function createProduct(formData: FormData) {
+  if (!(await isAdmin())) return;
   const name = String(formData.get("name") ?? "").trim();
   const unit = String(formData.get("unit") ?? "").trim();
   const size = String(formData.get("size") ?? "").trim() || null;
@@ -26,6 +28,7 @@ export async function createProduct(formData: FormData) {
 }
 
 export async function updateProduct(id: string, formData: FormData) {
+  if (!(await isAdmin())) return;
   const name = String(formData.get("name") ?? "").trim();
   const unit = String(formData.get("unit") ?? "").trim();
   const size = String(formData.get("size") ?? "").trim() || null;
@@ -55,6 +58,7 @@ export async function updateProduct(id: string, formData: FormData) {
 }
 
 export async function deleteProduct(id: string) {
+  if (!(await isAdmin())) return;
   await prisma.product.delete({ where: { id } });
   revalidatePath("/products");
   revalidatePath("/stock-counts");

@@ -1,9 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function createExpense(formData: FormData) {
+  if (!(await isAdmin())) return;
   const category = String(formData.get("category") ?? "").trim();
   const amount = Number(formData.get("amount") ?? 0);
   const note = String(formData.get("note") ?? "").trim() || null;
@@ -24,6 +26,7 @@ export async function createExpense(formData: FormData) {
 }
 
 export async function deleteExpense(id: string) {
+  if (!(await isAdmin())) return;
   await prisma.expense.delete({ where: { id } });
   revalidatePath("/finance");
 }

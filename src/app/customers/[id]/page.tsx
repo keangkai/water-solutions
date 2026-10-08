@@ -58,6 +58,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           <h1 className="text-xl font-semibold text-slate-900">{customer.name}</h1>
           <span className={`text-xs px-2 py-0.5 rounded-full border ${info.badge}`}>{info.label}</span>
         </div>
+        {customer.companyName && <div className="text-sm text-slate-500">{customer.companyName}</div>}
         {tags.length > 0 && <div className="text-xs text-slate-400 mt-1">{tags.join(" · ")}</div>}
         <div className="mt-3 space-y-1 text-sm text-slate-500">
           {customer.phone && (

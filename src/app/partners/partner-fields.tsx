@@ -6,11 +6,15 @@ import { segmentLabel, type CustomerSegment } from "@/lib/customer-labels";
 export type PartnerValues = {
   name: string;
   type: "SUPPLIER" | "CUSTOMER";
+  companyName: string | null;
   phone: string | null;
   address: string | null;
   segment: CustomerSegment | null;
   zone: string | null;
   sourceId: string | null;
+  mapUrl: string | null;
+  latitude: number | null;
+  longitude: number | null;
 };
 export type SourceOption = { id: string; name: string; isActive: boolean };
 
@@ -48,6 +52,10 @@ export function PartnerFields({
           <option value="SUPPLIER">ซัพพลายเออร์</option>
           <option value="CUSTOMER">ลูกค้า</option>
         </select>
+      </div>
+      <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
+        <label className="text-xs font-medium text-slate-500">ชื่อบริษัท (ถ้ามี)</label>
+        <input name="companyName" defaultValue={partner?.companyName ?? ""} className={inputClass} />
       </div>
       <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
         <label className="text-xs font-medium text-slate-500">เบอร์โทร</label>
@@ -98,6 +106,26 @@ export function PartnerFields({
         <label className="text-xs font-medium text-slate-500">ที่อยู่</label>
         <textarea name="address" rows={2} defaultValue={partner?.address ?? ""} className={inputClass} />
       </div>
+      {type === "CUSTOMER" && (
+        <div className="flex flex-col gap-1 w-full">
+          <label className="text-xs font-medium text-slate-500">หมุดแผนที่ (วางลิงก์ Google Maps)</label>
+          <input
+            name="mapUrl"
+            type="url"
+            inputMode="url"
+            defaultValue={partner?.mapUrl ?? ""}
+            placeholder="https://maps.app.goo.gl/..."
+            className={inputClass}
+          />
+          {partner?.mapUrl && (
+            <span className={`text-xs ${partner.latitude != null ? "text-emerald-600" : "text-amber-600"}`}>
+              {partner.latitude != null
+                ? `บันทึกพิกัดแล้ว ${partner.latitude.toFixed(5)}, ${partner.longitude?.toFixed(5)}`
+                : "อ่านพิกัดจากลิงก์นี้ไม่ได้ ลองใช้ลิงก์จากปุ่มแชร์ใน Google Maps"}
+            </span>
+          )}
+        </div>
+      )}
     </>
   );
 }

@@ -1,0 +1,169 @@
+export const dynamic = "force-dynamic";
+import Link from "next/link";
+import { prisma } from "@/lib/prisma";
+import { currentRole } from "@/lib/auth";
+import { logout } from "@/app/login/actions";
+import { formatDate } from "@/lib/format-date";
+import { DELIVERY_ROUNDS, roundLabel, shiftDateKey, todayInBangkok } from "@/lib/delivery";
+import { DriverOrderCard, type DriverOrder } from "./driver-order-card";
+import { Truck, ChevronLeft, ChevronRight, LogOut, Package } from "lucide-react";
+
+const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+export default async function DriverPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
+  const params = await searchParams;
+  const today = todayInBangkok();
+  const date = params.date && datePattern.test(params.date) ? params.date : today;
+  const role = await currentRole();
+
+  const orders = await prisma.order.findMany({
+    where: {
+      deliveryDate: { gte: new Date(date), lt: new Date(shiftDateKey(date, 1)) },
+      status: { in: ["CONFIRMED", "DELIVERED", "FAILED"] },
+    },
+    orderBy: { createdAt: "asc" },
+    include: { partner: true, lines: { include: { product: true } } },
+  });
+
+  // ของที่ต้องโหลดขึ้นรถ รวมตามขนาดน้ำของออเดอร์ที่ยังไม่ได้ส่ง
+  const load = new Map<string, { label: string; unit: string; qty: number }>();
+  for (const line of orders.filter((o) => o.status === "CONFIRMED").flatMap((o) => o.lines)) {
+    const label = line.product.size ?? line.product.name;
+    const key = `${label}|${line.product.unit}`;
+    const entry = load.get(key) ?? { label, unit: line.product.unit, qty: 0 };
+    entry.qty += line.quantity;
+    load.set(key, entry);
+  }
+  const loadList = Array.from(load.values()).sort((a, b) => a.label.localeCompare(b.label));
+
+  const toCard = (o: (typeof orders)[number]): DriverOrder => ({
+    id: o.id,
+    status: o.status,
+    name: o.partner.name,
+    companyName: o.partner.companyName,
+    phone: o.partner.phone,
+    address: o.deliveryAddress ?? o.partner.address,
+    coords:
+      !o.deliveryAddress && o.partner.latitude != null && o.partner.longitude != null
+        ? { latitude: o.partner.latitude, longitude: o.partner.longitude }
+        : null,
+    note: o.note,
+    issueReason: o.issueReason,
+    total: o.lines.reduce(
+      (sum, l) => sum + (o.status === "DELIVERED" ? (l.deliveredQuantity ?? l.quantity) : l.quantity) * l.unitPrice,
+      0
+    ),
+    lines: o.lines.map((l) => ({
+      id: l.id,
+      label: l.product.size ? `${l.product.size} · ${l.product.name}` : l.product.name,
+      unit: l.product.unit,
+      quantity: l.quantity,
+      deliveredQuantity: l.deliveredQuantity,
+    })),
+  });
+
+  // รอบที่รู้จักเรียงตามเวลา รอบที่ไม่อยู่ในรายการ (ถ้ามี) ต่อท้าย
+  const roundKeys = [
+    ...DELIVERY_ROUNDS.map((r) => r.key as string),
+    ...Array.from(new Set(orders.map((o) => o.deliveryRound))).filter(
+      (k) => !DELIVERY_ROUNDS.some((r) => r.key === k)
+    ),
+  ];
+  const rounds = roundKeys
+    .map((key) => {
+      const roundOrders = orders.filter((o) => o.deliveryRound === key);
+      // ที่ยังไม่ได้ส่งขึ้นก่อน
+      roundOrders.sort((a, b) => Number(a.status !== "CONFIRMED") - Number(b.status !== "CONFIRMED"));
+      return { key, orders: roundOrders.map(toCard), remaining: roundOrders.filter((o) => o.status === "CONFIRMED").length };
+    })
+    .filter((r) => r.orders.length > 0);
+
+  const remaining = orders.filter((o) => o.status === "CONFIRMED").length;
+  const dayLabel = date === today ? "วันนี้" : date === shiftDateKey(today, 1) ? "พรุ่งนี้" : date === shiftDateKey(today, -1) ? "เมื่อวาน" : "";
+
+  return (
+    <div className="max-w-xl mx-auto space-y-5 pb-8">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Truck className="size-6 text-sky-500" />
+          <h1 className="text-xl font-semibold text-slate-900">งานส่งน้ำ</h1>
+        </div>
+        <div className="flex items-center gap-1">
+          {role === "admin" && (
+            <Link href="/orders" className="text-sm text-sky-600 hover:text-sky-700 px-2 min-h-[44px] inline-flex items-center">
+              หน้า admin
+            </Link>
+          )}
+          <form action={logout}>
+            <button
+              className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-red-600 px-2 min-h-[44px] touch-manipulation"
+              aria-label="ออกจากระบบ"
+            >
+              <LogOut className="size-4" /> ออก
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between gap-2 bg-white border border-slate-200 rounded-2xl p-2 shadow-sm">
+        <Link
+          href={`/driver?date=${shiftDateKey(date, -1)}`}
+          className="size-12 inline-flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 touch-manipulation active:scale-95"
+          aria-label="วันก่อนหน้า"
+        >
+          <ChevronLeft className="size-6" />
+        </Link>
+        <div className="text-center">
+          <div className="text-lg font-semibold text-slate-900">{formatDate(new Date(date))}</div>
+          <div className="text-xs text-slate-500">
+            {dayLabel && <>{dayLabel} · </>}
+            {orders.length === 0 ? "ไม่มีงานส่ง" : `เหลือ ${remaining} จาก ${orders.length} ออเดอร์`}
+          </div>
+          {date !== today && (
+            <Link href="/driver" className="text-xs text-sky-600">
+              กลับไปวันนี้
+            </Link>
+          )}
+        </div>
+        <Link
+          href={`/driver?date=${shiftDateKey(date, 1)}`}
+          className="size-12 inline-flex items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 touch-manipulation active:scale-95"
+          aria-label="วันถัดไป"
+        >
+          <ChevronRight className="size-6" />
+        </Link>
+      </div>
+
+      {loadList.length > 0 && (
+        <div className="bg-sky-50 border border-sky-200 rounded-2xl p-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-sky-800">
+            <Package className="size-4" /> ต้องโหลดขึ้นรถ (ออเดอร์ที่ยังไม่ได้ส่ง)
+          </div>
+          <div className="mt-2 grid grid-cols-3 gap-2">
+            {loadList.map((item) => (
+              <div key={`${item.label}|${item.unit}`} className="bg-white rounded-xl p-2 text-center">
+                <div className="text-xs text-slate-500">{item.label}</div>
+                <div className="text-2xl font-semibold text-slate-900">{item.qty}</div>
+                <div className="text-xs text-slate-400">{item.unit}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {rounds.map((r) => (
+        <section key={r.key} className="space-y-3">
+          <h2 className="flex items-baseline justify-between text-sm font-medium text-slate-500 px-1">
+            <span className="text-base text-slate-900">รอบ {roundLabel(r.key)}</span>
+            <span>{r.remaining > 0 ? `เหลือ ${r.remaining} ออเดอร์` : "ส่งครบรอบนี้แล้ว"}</span>
+          </h2>
+          {r.orders.map((o) => (
+            <DriverOrderCard key={o.id} order={o} />
+          ))}
+        </section>
+      ))}
+
+      {orders.length === 0 && <div className="text-center text-slate-400 py-16">ไม่มีออเดอร์ที่ต้องส่งในวันนี้</div>}
+    </div>
+  );
+}

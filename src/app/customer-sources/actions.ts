@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 function revalidateSourcePaths() {
@@ -10,6 +11,7 @@ function revalidateSourcePaths() {
 }
 
 export async function createCustomerSource(formData: FormData) {
+  if (!(await isAdmin())) return;
   const name = String(formData.get("name") ?? "").trim();
   const channel = String(formData.get("channel") ?? "");
   if (!name || (channel !== "OFFLINE" && channel !== "ONLINE")) return;
@@ -24,11 +26,13 @@ export async function createCustomerSource(formData: FormData) {
 }
 
 export async function setCustomerSourceActive(id: string, isActive: boolean) {
+  if (!(await isAdmin())) return;
   await prisma.customerSource.update({ where: { id }, data: { isActive } });
   revalidateSourcePaths();
 }
 
 export async function deleteCustomerSource(id: string) {
+  if (!(await isAdmin())) return;
   // ลบได้เฉพาะช่องทางที่ยังไม่มีลูกค้าใช้ ถ้ามีแล้วให้ปิดใช้งานแทน
   const used = await prisma.partner.count({ where: { sourceId: id } });
   if (used > 0) return;
