@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { roleForSession } from "@/lib/session-role";
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (pathname.startsWith("/login")) {
     return NextResponse.next();
   }
 
-  const role = roleForSession(request.cookies.get("session")?.value);
+  const role = await roleForSession(request.cookies.get("session")?.value);
   if (role === "admin") {
     return NextResponse.next();
   }
