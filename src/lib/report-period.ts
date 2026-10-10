@@ -45,6 +45,16 @@ export type PeriodOption = { key: string; label: string; count: number };
 
 export type SizeRow = { label: string; qty: number; revenue: number; cost: number };
 
+export type SaleLine = {
+  date: string;
+  customer: string;
+  product: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+  fromOrder: boolean;
+};
+
 export type PeriodOrder = {
   id: string;
   status: "CONFIRMED" | "DELIVERED" | "FAILED" | "CANCELLED";
@@ -70,7 +80,8 @@ export type PeriodReport = {
   pendingValue: number;
   unpaid: { count: number; amount: number };
   sizes: SizeRow[];
-  topCustomers: { name: string; revenue: number; qty: number }[];
+  customers: { name: string; revenue: number; qty: number }[];
+  saleLines: SaleLine[];
   expenseByCategory: { category: string; amount: number }[];
   // กราฟแท่ง: รายวันในเดือน หรือรายเดือนในปี
   series: { label: string; revenue: number; profit: number }[];
@@ -132,6 +143,7 @@ export async function buildPeriodReport(view: PeriodView, key: string): Promise<
   const sizeMap = new Map<string, SizeRow>();
   const customerMap = new Map<string, { name: string; revenue: number; qty: number }>();
   const seriesMap = new Map<string, { revenue: number; profit: number }>();
+  const saleLines: SaleLine[] = [];
   let revenue = 0;
   let cogs = 0;
   let qty = 0;
@@ -147,6 +159,16 @@ export async function buildPeriodReport(view: PeriodView, key: string): Promise<
       revenue += lineRevenue;
       cogs += lineCost;
       qty += l.quantity;
+
+      saleLines.push({
+        date: day,
+        customer: m.partner.name,
+        product: productLabel(l.product),
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        total: lineRevenue,
+        fromOrder: !!m.order,
+      });
 
       const label = productLabel(l.product);
       const size = sizeMap.get(label) ?? { label, qty: 0, revenue: 0, cost: 0 };
@@ -225,7 +247,8 @@ export async function buildPeriodReport(view: PeriodView, key: string): Promise<
     pendingValue: pending.reduce((s, o) => s + orderValue(o), 0),
     unpaid: { count: unpaid.length, amount: unpaid.reduce((s, o) => s + orderValue(o), 0) },
     sizes: Array.from(sizeMap.values()).sort((a, b) => b.qty - a.qty),
-    topCustomers: Array.from(customerMap.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 5),
+    customers: Array.from(customerMap.values()).sort((a, b) => b.revenue - a.revenue),
+    saleLines: saleLines.sort((a, b) => a.date.localeCompare(b.date) || a.customer.localeCompare(b.customer)),
     expenseByCategory: Array.from(expenseMap, ([category, amount]) => ({ category, amount })).sort((a, b) => b.amount - a.amount),
     series,
     orders:

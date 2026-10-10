@@ -2,7 +2,7 @@ import Link from "next/link";
 import { orderStatusInfo, roundLabel, shiftDateKey, todayInBangkok } from "@/lib/delivery";
 import type { PeriodReport } from "@/lib/report-period";
 import { PeriodSelect } from "./period-select";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Download } from "lucide-react";
 
 const money = (n: number) => Math.round(n).toLocaleString();
 const profitTone = (n: number) => (n >= 0 ? "text-emerald-600" : "text-red-600");
@@ -45,6 +45,12 @@ export function PeriodReportView({ report }: { report: PeriodReport }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
         <PeriodSelect view={view} value={key} options={report.options} />
+        <a
+          href={`/reports/export?view=${view}&key=${key}`}
+          className="min-h-[44px] px-4 inline-flex items-center gap-1.5 rounded-xl text-sm border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 touch-manipulation active:scale-95 sm:ml-auto"
+        >
+          <Download className="size-4" /> ส่งออก CSV
+        </a>
         {view === "day" &&
           [
             ["เมื่อวาน", shiftDateKey(today, -1)],
@@ -208,11 +214,11 @@ export function PeriodReportView({ report }: { report: PeriodReport }) {
       </section>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {report.topCustomers.length > 0 && (
+        {report.customers.length > 0 && (
           <section className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm">
             <h2 className="text-sm font-medium text-slate-500 mb-2">ลูกค้าที่ซื้อมากสุด</h2>
             <ul className="space-y-1.5 text-sm">
-              {report.topCustomers.map((c) => (
+              {report.customers.slice(0, 5).map((c) => (
                 <li key={c.name} className="flex justify-between gap-2">
                   <span className="text-slate-700">{c.name}</span>
                   <span className="text-slate-900 whitespace-nowrap">{money(c.revenue)} · {c.qty} แพ็ค</span>
