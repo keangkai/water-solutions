@@ -12,6 +12,13 @@ function parseDeliveryMethod(formData: FormData, type: MovementType): DeliveryMe
   return type === "OUT" && (raw === "DELIVERY" || raw === "PICKUP") ? raw : null;
 }
 
+// ใบรับเข้าต้องเป็นซัพพลายเออร์ ใบขายออกต้องเป็นลูกค้า ยกเว้นแก้ใบเก่าที่ไม่ได้เปลี่ยนคู่ค้า
+async function partnerMatchesType(partnerId: string, type: MovementType, existingPartnerId?: string) {
+  if (partnerId === existingPartnerId) return true;
+  const partner = await prisma.partner.findUnique({ where: { id: partnerId }, select: { type: true } });
+  return partner?.type === (type === "OUT" ? "CUSTOMER" : "SUPPLIER");
+}
+
 function revalidateMovementPaths() {
   revalidatePath("/movements");
   revalidatePath("/reports");
@@ -28,6 +35,7 @@ export async function createMovement(formData: FormData) {
   const dateRaw = String(formData.get("date") ?? "").trim();
 
   if (!partnerId || !warehouseId || (type !== "IN" && type !== "OUT")) return;
+  if (!(await partnerMatchesType(partnerId, type))) return;
 
   const lines = parseLines(formData);
   if (lines.length === 0) return;
@@ -56,6 +64,8 @@ export async function updateMovement(id: string, formData: FormData) {
   const dateRaw = String(formData.get("date") ?? "").trim();
 
   if (!partnerId || !warehouseId || (type !== "IN" && type !== "OUT")) return;
+  const existing = await prisma.movement.findUnique({ where: { id }, select: { partnerId: true } });
+  if (!existing || !(await partnerMatchesType(partnerId, type, existing.partnerId))) return;
 
   const lines = parseLines(formData);
   if (lines.length === 0) return;

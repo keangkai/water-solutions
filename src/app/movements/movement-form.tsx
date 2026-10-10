@@ -92,11 +92,10 @@ export function MovementForm({
   const totalQty = rows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
   const dateDefault = (initialMovement ? initialMovement.date : new Date()).toISOString().slice(0, 10);
 
-  // ใบขายออกเลือกได้เฉพาะลูกค้า (ใบเก่าที่ผูกกับคู่ค้าประเภทอื่นยังแสดงคู่ค้าเดิมไว้)
-  const partnerOptions =
-    type === "OUT"
-      ? partners.filter((p) => p.type === "CUSTOMER" || p.id === initialMovement?.partnerId)
-      : partners;
+  // ใบรับเข้าเลือกได้เฉพาะซัพพลายเออร์ ใบขายออกเลือกได้เฉพาะลูกค้า
+  // (ใบเก่าที่ผูกกับคู่ค้าประเภทอื่นยังแสดงคู่ค้าเดิมไว้ เพื่อให้แก้ไขใบเก่าได้)
+  const wantedType = type === "OUT" ? "CUSTOMER" : "SUPPLIER";
+  const partnerOptions = partners.filter((p) => p.type === wantedType || p.id === initialMovement?.partnerId);
 
   const action = isEdit ? updateMovement.bind(null, initialMovement!.id) : createMovement;
 
@@ -159,14 +158,19 @@ export function MovementForm({
         </div>
         <div className="flex flex-col gap-1 w-full sm:w-auto">
           <div className="flex items-baseline justify-between gap-3">
-            <label className="text-xs font-medium text-slate-500">{type === "OUT" ? "ลูกค้า" : "คู่ค้า"}</label>
-            {type === "OUT" && (
-              <Link href="/partners" className="text-xs text-sky-600 hover:text-sky-700">
-                {partnerOptions.length === 0 ? "ยังไม่มีลูกค้า เพิ่มลูกค้าก่อน" : "+ ลูกค้าใหม่"}
-              </Link>
-            )}
+            <label className="text-xs font-medium text-slate-500">{type === "OUT" ? "ลูกค้า" : "ซัพพลายเออร์"}</label>
+            <Link href="/partners" className="text-xs text-sky-600 hover:text-sky-700">
+              {partnerOptions.length === 0
+                ? type === "OUT"
+                  ? "ยังไม่มีลูกค้า เพิ่มลูกค้าก่อน"
+                  : "ยังไม่มีซัพพลายเออร์ เพิ่มก่อน"
+                : type === "OUT"
+                  ? "+ ลูกค้าใหม่"
+                  : "+ ซัพพลายเออร์ใหม่"}
+            </Link>
           </div>
           <select
+            key={type}
             name="partnerId"
             required
             defaultValue={initialMovement?.partnerId}
@@ -174,7 +178,7 @@ export function MovementForm({
           >
             {partnerOptions.map((p) => (
               <option key={p.id} value={p.id}>
-                {type === "OUT" ? p.name : `${p.name} (${partnerTypeLabel[p.type]})`}
+                {p.type === wantedType ? p.name : `${p.name} (${partnerTypeLabel[p.type]})`}
               </option>
             ))}
           </select>
