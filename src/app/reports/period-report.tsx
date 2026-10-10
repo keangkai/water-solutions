@@ -37,9 +37,17 @@ function Bars({ series }: { series: PeriodReport["series"] }) {
   );
 }
 
+const dmy = (key: string) => key.split("-").reverse().join("/");
+
 export function PeriodReportView({ report }: { report: PeriodReport }) {
   const { view, key } = report;
   const today = todayInBangkok();
+
+  // รายวันที่ไม่มีออเดอร์ ยอดขาย หรือค่าใช้จ่ายเลย: แสดงข้อความแทนการ์ดเลข 0 พร้อมทางลัดไปวันที่มีข้อมูล
+  const isEmpty = view === "day" && report.orderCounts.total === 0 && report.qty === 0 && report.expenses === 0;
+  const daysWithData = report.options.filter((o) => o.count > 0).map((o) => o.key);
+  const prevDay = daysWithData.filter((k) => k < key).sort().pop();
+  const nextDay = daysWithData.filter((k) => k > key).sort()[0];
 
   return (
     <div className="space-y-6">
@@ -69,6 +77,33 @@ export function PeriodReportView({ report }: { report: PeriodReport }) {
           ))}
       </div>
 
+      {isEmpty ? (
+        <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-8 text-center space-y-3">
+          <div className="text-lg font-medium text-slate-700">
+            {key === today ? "วันนี้ยังไม่มีออเดอร์" : `วันที่ ${dmy(key)} ไม่มีออเดอร์`}
+          </div>
+          <div className="text-sm text-slate-500">ไม่มีออเดอร์ ยอดขาย หรือค่าใช้จ่ายในวันนี้</div>
+          <div className="flex flex-wrap justify-center gap-2 pt-1">
+            {prevDay && (
+              <Link
+                href={`/reports?view=day&key=${prevDay}`}
+                className="min-h-[44px] px-4 inline-flex items-center rounded-xl text-sm border border-slate-300 bg-white text-slate-700 touch-manipulation active:scale-95"
+              >
+                ← วันที่มีออเดอร์ก่อนหน้า ({dmy(prevDay)})
+              </Link>
+            )}
+            {nextDay && (
+              <Link
+                href={`/reports?view=day&key=${nextDay}`}
+                className="min-h-[44px] px-4 inline-flex items-center rounded-xl text-sm border border-slate-300 bg-white text-slate-700 touch-manipulation active:scale-95"
+              >
+                วันที่มีออเดอร์ถัดไป ({dmy(nextDay)}) →
+              </Link>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card label="ยอดขาย" value={money(report.revenue)} sub={`${report.qty.toLocaleString()} แพ็ค`} tone="text-sky-600" />
         <Card label="ต้นทุนสินค้าที่ขาย" value={money(report.cogs)} tone="text-amber-600" />
@@ -241,6 +276,8 @@ export function PeriodReportView({ report }: { report: PeriodReport }) {
           </section>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }
