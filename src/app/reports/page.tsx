@@ -1,9 +1,48 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { getStockSnapshot, stockKey, totalsByProduct } from "@/lib/stock";
+import Link from "next/link";
+import { buildPeriodReport, defaultKey, parseKey, parseView } from "@/lib/report-period";
+import { PeriodReportView } from "./period-report";
 import { BarChart3, TrendingUp, TrendingDown, Wallet, AlertTriangle, Users } from "lucide-react";
 
-export default async function ReportsPage() {
+const tabs = [
+  { view: null, label: "ภาพรวม" },
+  { view: "day", label: "รายวัน" },
+  { view: "month", label: "รายเดือน" },
+  { view: "year", label: "รายปี" },
+] as const;
+
+export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ view?: string; key?: string }> }) {
+  const params = await searchParams;
+  const view = parseView(params.view);
+  const report = view ? await buildPeriodReport(view, parseKey(view, params.key)) : null;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <BarChart3 className="size-5 text-sky-500" />
+        <h1 className="text-xl font-semibold text-slate-900">รายงาน</h1>
+      </div>
+      <nav className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit" aria-label="ประเภทรายงาน">
+        {tabs.map((t) => (
+          <Link
+            key={t.label}
+            href={t.view ? `/reports?view=${t.view}&key=${defaultKey(t.view)}` : "/reports"}
+            className={`min-h-[44px] px-4 inline-flex items-center rounded-lg text-sm touch-manipulation ${
+              t.view === view ? "bg-white text-slate-900 shadow-sm font-medium" : "text-slate-600"
+            }`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </nav>
+      {report ? <PeriodReportView report={report} /> : <OverviewReport />}
+    </div>
+  );
+}
+
+async function OverviewReport() {
   const [products, movements, warehouses, snapshot] = await Promise.all([
     prisma.product.findMany({ orderBy: { name: "asc" } }),
     prisma.movement.findMany({ include: { partner: true, lines: { include: { product: true } } } }),
@@ -76,11 +115,6 @@ export default async function ReportsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-2">
-        <BarChart3 className="size-5 text-sky-500" />
-        <h1 className="text-xl font-semibold text-slate-900">รายงาน</h1>
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
           <div className="flex items-center gap-2 text-slate-500 text-sm">
