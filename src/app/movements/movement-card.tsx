@@ -6,11 +6,11 @@ import { deleteMovement } from "./actions";
 import { MovementForm } from "./movement-form";
 import { formatDate } from "@/lib/format-date";
 import { deliveryLabel, type DeliveryMethod } from "@/lib/customer-labels";
+import type { PartnerOptions } from "@/lib/movement-partners";
 
 const typeLabel = { IN: "รับเข้า", OUT: "ขายออก" } as const;
 
 type Product = { id: string; name: string; unit: string; defaultCostPrice: number | null; defaultSellPrice: number | null };
-type Partner = { id: string; name: string; type: "SUPPLIER" | "CUSTOMER" };
 type Warehouse = { id: string; name: string };
 type Movement = {
   id: string;
@@ -30,12 +30,12 @@ type Movement = {
 export function MovementCard({
   movement,
   products,
-  partners,
+  partnerOptions,
   warehouses,
 }: {
   movement: Movement;
   products: Product[];
-  partners: Partner[];
+  partnerOptions: PartnerOptions;
   warehouses: Warehouse[];
 }) {
   const [editing, setEditing] = useState(false);
@@ -44,7 +44,7 @@ export function MovementCard({
     return (
       <MovementForm
         products={products}
-        partners={partners}
+        partnerOptions={partnerOptions}
         warehouses={warehouses}
         initialMovement={movement}
         onDone={() => setEditing(false)}

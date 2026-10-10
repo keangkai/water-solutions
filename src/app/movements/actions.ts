@@ -5,6 +5,7 @@ import { isAdmin } from "@/lib/auth";
 import { MovementType, DeliveryMethod } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { parseLines } from "@/lib/parse-lines";
+import { partnerTypeFor } from "@/lib/movement-partners";
 
 // วิธีรับของเก็บเฉพาะใบขายออก
 function parseDeliveryMethod(formData: FormData, type: MovementType): DeliveryMethod | null {
@@ -12,11 +13,11 @@ function parseDeliveryMethod(formData: FormData, type: MovementType): DeliveryMe
   return type === "OUT" && (raw === "DELIVERY" || raw === "PICKUP") ? raw : null;
 }
 
-// ใบรับเข้าต้องเป็นซัพพลายเออร์ ใบขายออกต้องเป็นลูกค้า ยกเว้นแก้ใบเก่าที่ไม่ได้เปลี่ยนคู่ค้า
+// ตรวจตามกฎใน lib/movement-partners ยกเว้นแก้ใบเก่าที่ไม่ได้เปลี่ยนคู่ค้า
 async function partnerMatchesType(partnerId: string, type: MovementType, existingPartnerId?: string) {
   if (partnerId === existingPartnerId) return true;
   const partner = await prisma.partner.findUnique({ where: { id: partnerId }, select: { type: true } });
-  return partner?.type === (type === "OUT" ? "CUSTOMER" : "SUPPLIER");
+  return partner?.type === partnerTypeFor[type];
 }
 
 function revalidateMovementPaths() {

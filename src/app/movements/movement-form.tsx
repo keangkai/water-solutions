@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Plus, X, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { createMovement, updateMovement } from "./actions";
 import { deliveryLabel, type DeliveryMethod } from "@/lib/customer-labels";
+import type { PartnerOptions } from "@/lib/movement-partners";
 
 type Product = {
   id: string;
@@ -13,11 +14,8 @@ type Product = {
   defaultCostPrice: number | null;
   defaultSellPrice: number | null;
 };
-type Partner = { id: string; name: string; type: "SUPPLIER" | "CUSTOMER" };
 type Warehouse = { id: string; name: string };
 type LineRow = { productId: string; quantity: string; unitPrice: string };
-
-const partnerTypeLabel = { SUPPLIER: "ซัพพลายเออร์", CUSTOMER: "ลูกค้า" } as const;
 
 type InitialMovement = {
   id: string;
@@ -37,14 +35,14 @@ function defaultPriceFor(product: Product | undefined, t: "IN" | "OUT") {
 
 export function MovementForm({
   products,
-  partners,
+  partnerOptions: allPartnerOptions,
   warehouses,
   initialMovement,
   defaultType = "IN",
   onDone,
 }: {
   products: Product[];
-  partners: Partner[];
+  partnerOptions: PartnerOptions;
   warehouses: Warehouse[];
   initialMovement?: InitialMovement;
   defaultType?: "IN" | "OUT";
@@ -92,10 +90,8 @@ export function MovementForm({
   const totalQty = rows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
   const dateDefault = (initialMovement ? initialMovement.date : new Date()).toISOString().slice(0, 10);
 
-  // ใบรับเข้าเลือกได้เฉพาะซัพพลายเออร์ ใบขายออกเลือกได้เฉพาะลูกค้า
-  // (ใบเก่าที่ผูกกับคู่ค้าประเภทอื่นยังแสดงคู่ค้าเดิมไว้ เพื่อให้แก้ไขใบเก่าได้)
-  const wantedType = type === "OUT" ? "CUSTOMER" : "SUPPLIER";
-  const partnerOptions = partners.filter((p) => p.type === wantedType || p.id === initialMovement?.partnerId);
+  // ฝั่ง server เป็นคนกำหนดว่าใบแต่ละประเภทเลือกคู่ค้าใครได้ ที่นี่แค่แสดงตามประเภทที่เลือก
+  const partnerOptions = allPartnerOptions[type];
 
   const action = isEdit ? updateMovement.bind(null, initialMovement!.id) : createMovement;
 
@@ -178,7 +174,7 @@ export function MovementForm({
           >
             {partnerOptions.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.type === wantedType ? p.name : `${p.name} (${partnerTypeLabel[p.type]})`}
+                {p.label}
               </option>
             ))}
           </select>
