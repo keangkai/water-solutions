@@ -6,7 +6,7 @@ import { logout } from "@/app/login/actions";
 import { formatDate } from "@/lib/format-date";
 import { DELIVERY_ROUNDS, roundLabel, shiftDateKey, todayInBangkok } from "@/lib/delivery";
 import { DriverOrderCard, type DriverOrder } from "./driver-order-card";
-import { Truck, ChevronLeft, ChevronRight, LogOut, Package } from "lucide-react";
+import { Truck, ChevronLeft, ChevronRight, LogOut, Package, ClipboardList } from "lucide-react";
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -35,6 +35,26 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
     load.set(key, entry);
   }
   const loadList = Array.from(load.values()).sort((a, b) => a.label.localeCompare(b.label));
+
+  // สรุปงานของวัน: ส่งสำเร็จกี่แพ็ค ต้องนำกลับกี่แพ็ค (ส่งไม่ครบ + ส่งไม่ได้) และยอดที่ต้องเก็บ
+  const closed = orders.filter((o) => o.status !== "CONFIRMED");
+  const summary = new Map<string, { label: string; unit: string; delivered: number; back: number }>();
+  let deliveredAmount = 0;
+  for (const o of closed) {
+    for (const line of o.lines) {
+      const label = line.product.size ?? line.product.name;
+      const key = `${label}|${line.product.unit}`;
+      const entry = summary.get(key) ?? { label, unit: line.product.unit, delivered: 0, back: 0 };
+      const done = o.status === "DELIVERED" ? (line.deliveredQuantity ?? line.quantity) : 0;
+      entry.delivered += done;
+      entry.back += line.quantity - done;
+      summary.set(key, entry);
+      deliveredAmount += done * line.unitPrice;
+    }
+  }
+  const summaryList = Array.from(summary.values()).sort((a, b) => a.label.localeCompare(b.label));
+  const deliveredCount = orders.filter((o) => o.status === "DELIVERED").length;
+  const failedCount = orders.filter((o) => o.status === "FAILED").length;
 
   const toCard = (o: (typeof orders)[number]): DriverOrder => ({
     id: o.id,
@@ -162,6 +182,50 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
           ))}
         </section>
       ))}
+
+      {closed.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm space-y-3">
+          <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <ClipboardList className="size-4" /> สรุปงาน {dayLabel || formatDate(new Date(date))}
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-emerald-50 rounded-xl p-2">
+              <div className="text-2xl font-semibold text-emerald-700">{deliveredCount}</div>
+              <div className="text-xs text-emerald-700">ส่งแล้ว</div>
+            </div>
+            <div className="bg-red-50 rounded-xl p-2">
+              <div className="text-2xl font-semibold text-red-700">{failedCount}</div>
+              <div className="text-xs text-red-700">ส่งไม่ได้</div>
+            </div>
+            <div className="bg-sky-50 rounded-xl p-2">
+              <div className="text-2xl font-semibold text-sky-700">{remaining}</div>
+              <div className="text-xs text-sky-700">ยังไม่ได้ส่ง</div>
+            </div>
+          </div>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-slate-500 border-b border-slate-200">
+                <th className="py-1.5 font-medium">ขนาด</th>
+                <th className="py-1.5 font-medium text-right">ส่งสำเร็จ</th>
+                <th className="py-1.5 font-medium text-right">นำกลับ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summaryList.map((r) => (
+                <tr key={`${r.label}|${r.unit}`} className="border-b border-slate-100 last:border-0">
+                  <td className="py-1.5 text-slate-700">{r.label}</td>
+                  <td className="py-1.5 text-right text-slate-900">{r.delivered} {r.unit}</td>
+                  <td className={`py-1.5 text-right ${r.back > 0 ? "text-amber-700 font-medium" : "text-slate-400"}`}>{r.back}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="flex items-baseline justify-between text-sm pt-1">
+            <span className="text-slate-500">ยอดที่ลูกค้าต้องโอน (ส่งแล้ว)</span>
+            <span className="font-semibold text-slate-900">{deliveredAmount.toLocaleString()} บาท</span>
+          </div>
+        </div>
+      )}
 
       {orders.length === 0 && <div className="text-center text-slate-400 py-16">ไม่มีออเดอร์ที่ต้องส่งในวันนี้</div>}
     </div>

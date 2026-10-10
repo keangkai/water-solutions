@@ -3,7 +3,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { OrderForm } from "./order-form";
 import { OrderCard } from "./order-card";
-import { todayInBangkok } from "@/lib/delivery";
+import { DELIVERY_ROUNDS, isDeliveryRound, todayInBangkok } from "@/lib/delivery";
+import { bkkDay } from "@/lib/report-period";
 import { ClipboardCheck } from "lucide-react";
 
 const tabs = {
@@ -14,12 +15,30 @@ const tabs = {
 } as const;
 type TabKey = keyof typeof tabs;
 
-export default async function OrdersPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+const datePattern = /^\d{4}-\d{2}-\d{2}$/;
+
+export default async function OrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ tab?: string; date?: string; round?: string; q?: string }>;
+}) {
   const params = await searchParams;
+  const filterDate = params.date && datePattern.test(params.date) ? params.date : "";
+  const filterRound = params.round && isDeliveryRound(params.round) ? params.round : "";
+  const filterText = (params.q ?? "").trim().slice(0, 100);
+  const hasFilter = !!(filterDate || filterRound || filterText);
+  // ลิงก์แท็บต้องพาตัวกรองไปด้วย
+  const filterQuery = (tabKey: string) => {
+    const q = new URLSearchParams({ tab: tabKey });
+    if (filterDate) q.set("date", filterDate);
+    if (filterRound) q.set("round", filterRound);
+    if (filterText) q.set("q", filterText);
+    return `/orders?${q.toString()}`;
+  };
   const tab: TabKey = params.tab && params.tab in tabs ? (params.tab as TabKey) : "pending";
   const today = todayInBangkok();
 
-  const [customers, products, warehouses, orders] = await Promise.all([
+  const [customers, products, warehouses, allFetched] = await Promise.all([
     prisma.partner.findMany({ where: { type: "CUSTOMER" }, orderBy: { name: "asc" } }),
     prisma.product.findMany({ orderBy: { name: "asc" } }),
     prisma.warehouse.findMany({ orderBy: { createdAt: "asc" } }),
@@ -29,6 +48,15 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     }),
   ]);
 
+  let orders = allFetched;
+  const needle = filterText.toLowerCase();
+  const matches = (o: (typeof orders)[number]) =>
+    (!filterDate || bkkDay(o.deliveryDate) === filterDate) &&
+    (!filterRound || o.deliveryRound === filterRound) &&
+    (!needle ||
+      [o.partner.name, o.partner.companyName, o.partner.phone].some((v) => v?.toLowerCase().includes(needle)));
+  orders = orders.filter(matches);
+
   const byTab: Record<TabKey, typeof orders> = {
     pending: orders.filter((o) => o.status === "CONFIRMED" || o.status === "FAILED"),
     unpaid: orders.filter((o) => o.status === "DELIVERED" && !o.paidAt),
@@ -37,7 +65,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     cancelled: orders.filter((o) => o.status === "CANCELLED").reverse(),
   };
   const visible = byTab[tab];
-  const failedCount = byTab.pending.filter((o) => o.status === "FAILED").length;
+  const failedCount = allFetched.filter((o) => o.status === "FAILED").length;
 
   const canRecord = customers.length > 0 && products.length > 0 && warehouses.length > 0;
 
@@ -68,11 +96,57 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
         </Link>
       )}
 
+      <form method="GET" action="/orders" className="bg-white border border-slate-200 rounded-xl p-3 shadow-sm flex flex-wrap items-end gap-3">
+        <input type="hidden" name="tab" value={tab} />
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-500 w-full sm:w-auto">
+          วันที่ส่ง
+          <input
+            type="date"
+            name="date"
+            defaultValue={filterDate}
+            className="border border-slate-300 rounded-xl px-3 min-h-[44px] text-base text-black bg-white focus:outline-none focus:ring-2 focus:ring-sky-200"
+          />
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-500 w-full sm:w-auto">
+          รอบ
+          <select
+            name="round"
+            defaultValue={filterRound}
+            className="border border-slate-300 rounded-xl px-3 min-h-[44px] text-base text-black bg-white focus:outline-none focus:ring-2 focus:ring-sky-200"
+          >
+            <option value="">ทุกรอบ</option>
+            {DELIVERY_ROUNDS.map((r) => (
+              <option key={r.key} value={r.key}>
+                {r.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1 text-xs font-medium text-slate-500 w-full sm:flex-1 sm:min-w-[180px]">
+          ลูกค้า / เบอร์โทร
+          <input
+            type="search"
+            name="q"
+            defaultValue={filterText}
+            placeholder="ค้นหา"
+            className="border border-slate-300 rounded-xl px-3 min-h-[44px] text-base text-black bg-white focus:outline-none focus:ring-2 focus:ring-sky-200"
+          />
+        </label>
+        <button className="min-h-[44px] px-5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-sm font-medium touch-manipulation active:scale-95">
+          ค้นหา
+        </button>
+        {hasFilter && (
+          <Link href={`/orders?tab=${tab}`} className="min-h-[44px] px-3 inline-flex items-center text-sm text-slate-500 hover:text-slate-900">
+            ล้างตัวกรอง
+          </Link>
+        )}
+      </form>
+
       <div className="flex gap-1 border-b border-slate-200 overflow-x-auto">
         {(Object.keys(tabs) as TabKey[]).map((key) => (
           <Link
             key={key}
-            href={`/orders?tab=${key}`}
+            href={filterQuery(key)}
             className={`flex items-center gap-1.5 px-4 py-2.5 text-sm border-b-2 whitespace-nowrap transition-colors ${
               tab === key
                 ? "border-sky-500 text-sky-600 font-medium"
@@ -96,7 +170,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             today={today}
           />
         ))}
-        {visible.length === 0 && <div className="col-span-full text-center text-slate-400 py-10">{tabs[tab].empty}</div>}
+        {visible.length === 0 && <div className="col-span-full text-center text-slate-400 py-10">{hasFilter ? "ไม่พบออเดอร์ที่ตรงกับตัวกรอง" : tabs[tab].empty}</div>}
       </div>
     </div>
   );
