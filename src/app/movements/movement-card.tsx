@@ -32,11 +32,13 @@ export function MovementCard({
   products,
   partnerOptions,
   warehouses,
+  today,
 }: {
   movement: Movement;
   products: Product[];
   partnerOptions: PartnerOptions;
   warehouses: Warehouse[];
+  today: string;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -46,6 +48,7 @@ export function MovementCard({
         products={products}
         partnerOptions={partnerOptions}
         warehouses={warehouses}
+        today={today}
         initialMovement={movement}
         onDone={() => setEditing(false)}
       />

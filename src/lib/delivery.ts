@@ -29,6 +29,11 @@ export function todayInBangkok() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Bangkok" }).format(new Date());
 }
 
+// วันที่ตามเวลาไทยของค่าเวลาใดๆ (รองรับทั้งเที่ยงคืน UTC ที่เก็บจากฟอร์ม และเวลาจริงจาก now())
+export function bkkDay(d: Date) {
+  return new Date(d.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 // วันที่ในฐานข้อมูลเก็บเป็นเที่ยงคืน UTC ของวันนั้น เหมือนใบขายออก
 export function dateKey(date: Date) {
   return date.toISOString().slice(0, 10);

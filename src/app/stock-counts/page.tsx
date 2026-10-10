@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { deleteStockCount } from "./actions";
 import { StockCountForm } from "./stock-count-form";
+import { todayInBangkok } from "@/lib/delivery";
 import { ClipboardList, Trash2, Warehouse as WarehouseIcon, Package, Tag } from "lucide-react";
 
 export default async function StockCountsPage() {
@@ -127,7 +128,7 @@ export default async function StockCountsPage() {
           ต้องเพิ่มคลังและสินค้าก่อนจึงจะบันทึกผลนับได้
         </div>
       ) : (
-        <StockCountForm warehouses={warehouses} products={products} />
+        <StockCountForm warehouses={warehouses} products={products} today={todayInBangkok()} />
       )}
 
       <div className="space-y-3">

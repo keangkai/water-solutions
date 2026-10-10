@@ -6,6 +6,7 @@ import { Plus, X, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { createMovement, updateMovement } from "./actions";
 import { deliveryLabel, type DeliveryMethod } from "@/lib/customer-labels";
 import type { PartnerOptions } from "@/lib/movement-partners";
+import { bkkDay } from "@/lib/delivery";
 
 type Product = {
   id: string;
@@ -37,6 +38,7 @@ export function MovementForm({
   products,
   partnerOptions: allPartnerOptions,
   warehouses,
+  today,
   initialMovement,
   defaultType = "IN",
   onDone,
@@ -44,6 +46,7 @@ export function MovementForm({
   products: Product[];
   partnerOptions: PartnerOptions;
   warehouses: Warehouse[];
+  today: string; // วันที่ตามเวลาไทย กำหนดโดย server
   initialMovement?: InitialMovement;
   defaultType?: "IN" | "OUT";
   onDone?: () => void;
@@ -88,7 +91,7 @@ export function MovementForm({
 
   const total = rows.reduce((sum, r) => sum + (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0), 0);
   const totalQty = rows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
-  const dateDefault = (initialMovement ? initialMovement.date : new Date()).toISOString().slice(0, 10);
+  const dateDefault = initialMovement ? bkkDay(initialMovement.date) : today;
 
   // ฝั่ง server เป็นคนกำหนดว่าใบแต่ละประเภทเลือกคู่ค้าใครได้ ที่นี่แค่แสดงตามประเภทที่เลือก
   const partnerOptions = allPartnerOptions[type];

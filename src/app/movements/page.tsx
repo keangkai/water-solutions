@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { MovementForm } from "./movement-form";
 import { MovementCard } from "./movement-card";
 import { partnerOptionsFor } from "@/lib/movement-partners";
+import { todayInBangkok } from "@/lib/delivery";
 import { ArrowLeftRight, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 
 export default async function MovementsPage({
@@ -11,6 +12,7 @@ export default async function MovementsPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
+  const today = todayInBangkok();
   const tab = (await searchParams).tab === "out" ? "OUT" : "IN";
 
   const [products, partners, warehouses, movements] = await Promise.all([
@@ -108,6 +110,7 @@ export default async function MovementsPage({
           products={products}
           partnerOptions={partnerOptionsFor(partners)}
           warehouses={warehouses}
+          today={today}
           defaultType={tab}
         />
       )}
@@ -120,6 +123,7 @@ export default async function MovementsPage({
             products={products}
             partnerOptions={partnerOptionsFor(partners, m.partnerId)}
             warehouses={warehouses}
+            today={today}
           />
         ))}
         {visibleMovements.length === 0 && (

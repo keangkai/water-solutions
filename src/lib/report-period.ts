@@ -1,19 +1,15 @@
 import { prisma } from "./prisma";
-import { todayInBangkok } from "./delivery";
+import { bkkDay, todayInBangkok } from "./delivery";
+
+export { bkkDay };
 
 export type PeriodView = "day" | "month" | "year";
 
-const BKK_OFFSET_MS = 7 * 60 * 60 * 1000;
 const keyPattern: Record<PeriodView, RegExp> = {
   day: /^\d{4}-\d{2}-\d{2}$/,
   month: /^\d{4}-\d{2}$/,
   year: /^\d{4}$/,
 };
-
-// วันที่ตามเวลาไทยในรูป yyyy-mm-dd รองรับทั้งค่าเที่ยงคืน UTC ที่เก็บจากฟอร์ม และเวลาจริงจาก now()
-export function bkkDay(d: Date) {
-  return new Date(d.getTime() + BKK_OFFSET_MS).toISOString().slice(0, 10);
-}
 
 export function defaultKey(view: PeriodView) {
   const today = todayInBangkok();
