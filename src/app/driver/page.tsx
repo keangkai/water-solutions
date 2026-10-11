@@ -67,6 +67,7 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
       !o.deliveryAddress && o.partner.latitude != null && o.partner.longitude != null
         ? { latitude: o.partner.latitude, longitude: o.partner.longitude }
         : null,
+    mapUrl: o.deliveryAddress ? null : o.partner.mapUrl,
     note: o.note,
     issueReason: o.issueReason,
     total: o.lines.reduce(

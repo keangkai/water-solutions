@@ -5,6 +5,7 @@ import { Pencil, Trash2, Save, X, Phone, MapPin } from "lucide-react";
 import { updatePartner, deletePartner } from "./actions";
 import { PartnerFields, type PartnerValues, type SourceOption } from "./partner-fields";
 import { segmentLabel } from "@/lib/customer-labels";
+import { LinkifiedText } from "@/components/linkified-text";
 
 type Partner = PartnerValues & { id: string; source: { name: string } | null };
 
@@ -58,7 +59,7 @@ export function PartnerCard({
           )}
           {partner.address && (
             <div className="flex items-center gap-1.5">
-              <MapPin className="size-3.5 shrink-0" /> <span className="whitespace-pre-line wrap-anywhere min-w-0">{partner.address}</span>
+              <MapPin className="size-3.5 shrink-0" /> <span className="whitespace-pre-line wrap-anywhere min-w-0"><LinkifiedText text={partner.address} /></span>
             </div>
           )}
           {partner.mapUrl && (

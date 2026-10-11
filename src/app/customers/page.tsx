@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/format-date";
 import { segmentLabel } from "@/lib/customer-labels";
 import { behaviorInfo, behaviorOrder, classifyBehavior, type BehaviorStatus } from "@/lib/customer-behavior";
 import { UserSearch, Users, ShoppingBag, Wallet } from "lucide-react";
+import { LinkifiedText } from "@/components/linkified-text";
 
 const sortOptions = { total: "ยอดซื้อสูงสุด", recent: "ซื้อล่าสุด", orders: "สั่งบ่อยสุด" } as const;
 type SortKey = keyof typeof sortOptions;
@@ -287,7 +288,7 @@ export default async function CustomersPage({
                     </span>
                   </td>
                   <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{c.phone ?? "-"}</td>
-                  <td className="py-3 px-4 text-slate-600 min-w-[160px] max-w-[280px] whitespace-pre-line wrap-anywhere">{c.address ?? "-"}</td>
+                  <td className="py-3 px-4 text-slate-600 min-w-[160px] max-w-[280px] whitespace-pre-line wrap-anywhere">{c.address ? <LinkifiedText text={c.address} /> : "-"}</td>
                   <td className="py-3 px-4 text-right text-slate-600">{c.orders.toLocaleString()}</td>
                   <td className="py-3 px-4 text-right text-slate-600">{c.qty.toLocaleString()}</td>
                   <td className="py-3 px-4 text-right font-medium text-slate-900">{c.total.toLocaleString()}</td>
