@@ -79,7 +79,7 @@ export default async function MovementsPage({
       <div className="flex gap-1 border-b border-slate-200">
         <Link
           href="/movements?tab=in"
-          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm border-b-2 transition-colors ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] text-sm border-b-2 transition-colors ${
             tab === "IN"
               ? "border-emerald-500 text-emerald-600 font-medium"
               : "border-transparent text-slate-500 hover:text-slate-900"
@@ -90,7 +90,7 @@ export default async function MovementsPage({
         </Link>
         <Link
           href="/movements?tab=out"
-          className={`flex items-center gap-1.5 px-4 py-2.5 text-sm border-b-2 transition-colors ${
+          className={`flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] text-sm border-b-2 transition-colors ${
             tab === "OUT"
               ? "border-sky-500 text-sky-600 font-medium"
               : "border-transparent text-slate-500 hover:text-slate-900"

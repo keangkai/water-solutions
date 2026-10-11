@@ -58,7 +58,7 @@ export function PartnerCard({
           )}
           {partner.address && (
             <div className="flex items-center gap-1.5">
-              <MapPin className="size-3.5 shrink-0" /> <span className="whitespace-pre-line">{partner.address}</span>
+              <MapPin className="size-3.5 shrink-0" /> <span className="whitespace-pre-line wrap-anywhere min-w-0">{partner.address}</span>
             </div>
           )}
           {partner.mapUrl && (
@@ -66,7 +66,7 @@ export function PartnerCard({
               href={partner.mapUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sky-600 hover:text-sky-700"
+              className="inline-flex items-center gap-1.5 min-h-[44px] text-sky-600 hover:text-sky-700 touch-manipulation"
             >
               <MapPin className="size-3.5" /> เปิดแผนที่{partner.latitude == null && " (ยังไม่มีพิกัด)"}
             </a>

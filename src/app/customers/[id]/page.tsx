@@ -49,7 +49,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="space-y-6">
-      <Link href="/customers" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
+      <Link href="/customers" className="inline-flex items-center gap-1 min-h-[44px] text-sm text-slate-500 hover:text-slate-900 touch-manipulation">
         <ArrowLeft className="size-4" /> วิเคราะห์ลูกค้า
       </Link>
 
@@ -69,7 +69,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           {customer.address && (
             <div className="flex items-start gap-1.5">
               <MapPin className="size-3.5 mt-0.5 shrink-0" />
-              <span className="whitespace-pre-line">{customer.address}</span>
+              <span className="whitespace-pre-line wrap-anywhere">{customer.address}</span>
             </div>
           )}
         </div>

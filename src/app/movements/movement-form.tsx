@@ -158,7 +158,7 @@ export function MovementForm({
         <div className="flex flex-col gap-1 w-full sm:w-auto">
           <div className="flex items-baseline justify-between gap-3">
             <label className="text-xs font-medium text-slate-500">{type === "OUT" ? "ลูกค้า" : "ซัพพลายเออร์"}</label>
-            <Link href="/partners" className="text-xs text-sky-600 hover:text-sky-700">
+            <Link href="/partners" className="text-xs text-sky-600 hover:text-sky-700 min-h-[44px] inline-flex items-center touch-manipulation">
               {partnerOptions.length === 0
                 ? type === "OUT"
                   ? "ยังไม่มีลูกค้า เพิ่มลูกค้าก่อน"

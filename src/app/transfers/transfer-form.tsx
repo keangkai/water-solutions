@@ -66,12 +66,12 @@ export function TransferForm({
         {rows.map((row, i) => {
           const unit = products.find((p) => p.id === row.productId)?.unit;
           return (
-            <div key={i} className="flex items-center gap-2">
+            <div key={i} className="flex flex-wrap items-center gap-2">
               <select
                 name={`lines.${i}.productId`}
                 value={row.productId}
                 onChange={(e) => update(i, { productId: e.target.value })}
-                className={field}
+                className={`${field} w-full sm:w-auto sm:flex-1 min-w-0`}
               >
                 {products.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -92,7 +92,7 @@ export function TransferForm({
                 <button
                   type="button"
                   onClick={() => setRows((r) => r.filter((_, idx) => idx !== i))}
-                  className="min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-slate-400 hover:text-red-600 touch-manipulation"
+                  className="ml-auto sm:ml-0 min-h-[44px] min-w-[44px] inline-flex items-center justify-center text-slate-400 hover:text-red-600 touch-manipulation"
                   aria-label="ลบรายการ"
                 >
                   <X className="size-4" />

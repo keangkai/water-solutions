@@ -84,7 +84,7 @@ export function OrderForm({
         <div className="flex flex-col gap-1 w-full sm:w-auto sm:min-w-[200px]">
           <div className="flex items-baseline justify-between gap-3">
             <label className="text-xs font-medium text-slate-500">ลูกค้า</label>
-            <Link href="/partners" className="text-xs text-sky-600 hover:text-sky-700">
+            <Link href="/partners" className="text-xs text-sky-600 hover:text-sky-700 min-h-[44px] inline-flex items-center touch-manipulation">
               + ลูกค้าใหม่
             </Link>
           </div>

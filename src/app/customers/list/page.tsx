@@ -79,7 +79,7 @@ export default async function CustomerListPage({
           <Contact className="size-5 text-sky-500" />
           <h1 className="text-xl font-semibold text-slate-900">รายชื่อลูกค้า</h1>
         </div>
-        <Link href="/partners" className="text-sm text-sky-600 hover:text-sky-700 font-medium">
+        <Link href="/partners" className="text-sm text-sky-600 hover:text-sky-700 font-medium min-h-[44px] inline-flex items-center touch-manipulation">
           + เพิ่มลูกค้า
         </Link>
       </div>
@@ -106,7 +106,7 @@ export default async function CustomerListPage({
             <Link
               key={chip.value || "ALL"}
               href={segmentHref(chip.value)}
-              className={`px-3 py-1.5 rounded-full text-xs border transition-colors touch-manipulation ${
+              className={`px-3 py-1.5 min-h-[44px] inline-flex items-center rounded-full text-xs border transition-colors touch-manipulation ${
                 segment === chip.value
                   ? "bg-sky-50 text-sky-700 border-sky-200 font-medium"
                   : "bg-white text-slate-500 border-slate-200 hover:text-slate-900"
@@ -144,7 +144,7 @@ export default async function CustomerListPage({
                 <div className="min-w-0">
                   <Link
                     href={`/customers/${c.id}`}
-                    className="font-medium text-slate-900 hover:text-sky-600 break-words"
+                    className="font-medium text-slate-900 hover:text-sky-600 break-words inline-flex items-center min-h-[44px]"
                   >
                     {c.name}
                   </Link>
@@ -164,7 +164,7 @@ export default async function CustomerListPage({
                 <div className="flex items-center gap-1.5">
                   <Phone className="size-3.5 shrink-0 text-slate-400" />
                   {c.phone ? (
-                    <a href={`tel:${c.phone}`} className="text-sky-600 hover:text-sky-700">
+                    <a href={`tel:${c.phone}`} className="text-sky-600 hover:text-sky-700 inline-flex items-center min-h-[44px]">
                       {c.phone}
                     </a>
                   ) : (
@@ -174,7 +174,7 @@ export default async function CustomerListPage({
                 <div className="flex items-start gap-1.5">
                   <MapPin className="size-3.5 shrink-0 mt-1 text-slate-400" />
                   {c.address ? (
-                    <span className="whitespace-pre-line">{c.address}</span>
+                    <span className="whitespace-pre-line wrap-anywhere">{c.address}</span>
                   ) : (
                     <span className="text-slate-400">ไม่มีที่อยู่</span>
                   )}

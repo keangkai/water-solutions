@@ -95,7 +95,7 @@ export function StockCountForm({
               required
               list="stock-count-label-presets"
               placeholder="เช่น พาเลซใหญ่"
-              className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-black flex-1 focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400"
+              className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-black flex-1 min-w-0 focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400"
             />
             <input
               name={`lines.${i}.quantity`}
@@ -105,13 +105,14 @@ export function StockCountForm({
               onChange={(e) => updateRow(i, "quantity", e.target.value)}
               required
               placeholder="จำนวน"
-              className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-black w-28 focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400"
+              className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-black w-24 sm:w-28 shrink-0 focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400"
             />
             <button
               type="button"
               onClick={() => removeRow(i)}
               disabled={rows.length === 1}
-              className="text-slate-400 hover:text-red-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors"
+              className="size-11 shrink-0 inline-flex items-center justify-center text-slate-400 hover:text-red-600 disabled:opacity-30 disabled:hover:text-slate-400 transition-colors touch-manipulation"
+              aria-label="ลบแถว"
             >
               <X className="size-4" />
             </button>

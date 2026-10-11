@@ -64,13 +64,13 @@ export function Nav() {
     <>
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 sm:px-6 h-14">
-          <Link href="/" className="flex items-center gap-2 font-semibold text-slate-900">
+          <Link href="/" className="flex items-center gap-2 min-h-[44px] font-semibold text-slate-900">
             <Droplets className="size-5 text-sky-500" />
             <span>น้ำสต็อก</span>
           </Link>
           <button
             onClick={() => setOpen(true)}
-            className="p-2 -mr-2 text-slate-600 hover:text-slate-900 transition-colors touch-manipulation"
+            className="size-11 -mr-2 inline-flex items-center justify-center text-slate-600 hover:text-slate-900 transition-colors touch-manipulation"
             aria-label="เปิดเมนู"
           >
             <Menu className="size-6" />
@@ -100,7 +100,8 @@ export function Nav() {
           </div>
           <button
             onClick={() => setOpen(false)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            className="size-11 -mr-2 inline-flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors touch-manipulation"
+            aria-label="ปิดเมนู"
           >
             <X className="size-5" />
           </button>
