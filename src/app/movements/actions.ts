@@ -6,6 +6,7 @@ import { MovementType, DeliveryMethod } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
 import { parseLines } from "@/lib/parse-lines";
 import { partnerTypeFor } from "@/lib/movement-partners";
+import { warehouseUsable } from "@/lib/warehouses";
 
 // วิธีรับของเก็บเฉพาะใบขายออก
 function parseDeliveryMethod(formData: FormData, type: MovementType): DeliveryMethod | null {
@@ -37,6 +38,7 @@ export async function createMovement(formData: FormData) {
 
   if (!partnerId || !warehouseId || (type !== "IN" && type !== "OUT")) return;
   if (!(await partnerMatchesType(partnerId, type))) return;
+  if (!(await warehouseUsable(warehouseId))) return;
 
   const lines = parseLines(formData);
   if (lines.length === 0) return;
@@ -65,8 +67,9 @@ export async function updateMovement(id: string, formData: FormData) {
   const dateRaw = String(formData.get("date") ?? "").trim();
 
   if (!partnerId || !warehouseId || (type !== "IN" && type !== "OUT")) return;
-  const existing = await prisma.movement.findUnique({ where: { id }, select: { partnerId: true } });
+  const existing = await prisma.movement.findUnique({ where: { id }, select: { partnerId: true, warehouseId: true } });
   if (!existing || !(await partnerMatchesType(partnerId, type, existing.partnerId))) return;
+  if (!(await warehouseUsable(warehouseId, existing.warehouseId))) return;
 
   const lines = parseLines(formData);
   if (lines.length === 0) return;

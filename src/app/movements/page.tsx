@@ -5,6 +5,7 @@ import { MovementForm } from "./movement-form";
 import { MovementCard } from "./movement-card";
 import { partnerOptionsFor } from "@/lib/movement-partners";
 import { todayInBangkok } from "@/lib/delivery";
+import { warehouseOptionsFor } from "@/lib/warehouses";
 import { ArrowLeftRight, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 
 export default async function MovementsPage({
@@ -25,7 +26,7 @@ export default async function MovementsPage({
     }),
   ]);
 
-  const canRecord = products.length > 0 && partners.length > 0 && warehouses.length > 0;
+  const canRecord = products.length > 0 && partners.length > 0 && warehouses.some((w) => w.isActive);
 
   let totalInQty = 0;
   let totalInValue = 0;
@@ -109,7 +110,7 @@ export default async function MovementsPage({
           key={tab}
           products={products}
           partnerOptions={partnerOptionsFor(partners)}
-          warehouses={warehouses}
+          warehouses={warehouseOptionsFor(warehouses)}
           today={today}
           defaultType={tab}
         />
@@ -122,7 +123,7 @@ export default async function MovementsPage({
             movement={m}
             products={products}
             partnerOptions={partnerOptionsFor(partners, m.partnerId)}
-            warehouses={warehouses}
+            warehouses={warehouseOptionsFor(warehouses, m.warehouseId)}
             today={today}
           />
         ))}

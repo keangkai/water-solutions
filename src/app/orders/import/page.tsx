@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { ImportForm } from "./import-form";
+import { warehouseOptionsFor } from "@/lib/warehouses";
 import { ChevronLeft, FileSpreadsheet } from "lucide-react";
 
 export default async function ImportOrdersPage() {
@@ -23,10 +24,10 @@ export default async function ImportOrdersPage() {
         เปิดไฟล์ Excel เลือกเซลล์ทั้งตาราง (รวมแถวหัวคอลัมน์) คัดลอก แล้ววางในช่องด้านล่าง ระบบจะแสดงตัวอย่างให้ตรวจก่อนนำเข้าจริง
         คอลัมน์ที่ใช้: ชื่อ, เบอร์, ขนาดน้ำ (เช่น 600 ml), รวมจำนวน, วันที่สั่ง, วันที่ส่ง (เดือน/วัน/ปี พ.ศ.), ที่อยู่, ช่องทาง และลิงก์แผนที่
       </p>
-      {warehouses.length > 0 && products.length > 0 ? (
+      {warehouses.some((w) => w.isActive) && products.length > 0 ? (
         <ImportForm
           products={products.map((p) => ({ id: p.id, label: [p.brand?.name, p.name, p.size].filter(Boolean).join(" · "), size: p.size }))}
-          warehouses={warehouses.map((w) => ({ id: w.id, name: w.name }))}
+          warehouses={warehouseOptionsFor(warehouses)}
         />
       ) : (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-4">ต้องมีสินค้าและคลังก่อน</div>

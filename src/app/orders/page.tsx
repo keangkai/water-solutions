@@ -3,8 +3,9 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { OrderForm } from "./order-form";
 import { OrderCard } from "./order-card";
-import { DELIVERY_ROUNDS, isDeliveryRound, todayInBangkok } from "@/lib/delivery";
+import { DELIVERY_ROUNDS, earliestDeliveryDate, isDeliveryRound, todayInBangkok } from "@/lib/delivery";
 import { bkkDay } from "@/lib/report-period";
+import { warehouseOptionsFor } from "@/lib/warehouses";
 import { ClipboardCheck } from "lucide-react";
 
 const tabs = {
@@ -67,7 +68,7 @@ export default async function OrdersPage({
   const visible = byTab[tab];
   const failedCount = allFetched.filter((o) => o.status === "FAILED").length;
 
-  const canRecord = customers.length > 0 && products.length > 0 && warehouses.length > 0;
+  const canRecord = customers.length > 0 && products.length > 0 && warehouses.some((w) => w.isActive);
 
   return (
     <div className="space-y-6">
@@ -80,7 +81,13 @@ export default async function OrdersPage({
       </div>
 
       {canRecord ? (
-        <OrderForm customers={customers} products={products} warehouses={warehouses} today={today} />
+        <OrderForm
+          customers={customers}
+          products={products}
+          warehouses={warehouseOptionsFor(warehouses)}
+          today={today}
+          minDeliveryDate={earliestDeliveryDate(today)}
+        />
       ) : (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-4">
           ต้องมีลูกค้า สินค้า และคลัง ก่อนจึงจะบันทึกออเดอร์ได้
@@ -166,7 +173,7 @@ export default async function OrdersPage({
             order={o}
             customers={customers}
             products={products}
-            warehouses={warehouses}
+            warehouses={warehouseOptionsFor(warehouses, o.warehouseId)}
             today={today}
           />
         ))}

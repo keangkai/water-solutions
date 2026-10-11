@@ -3,8 +3,9 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { currentRole } from "@/lib/auth";
-import { isDeliveryRound } from "@/lib/delivery";
+import { earliestDeliveryDate, isDeliveryRound } from "@/lib/delivery";
 import { parseLines } from "@/lib/parse-lines";
+import { warehouseUsable } from "@/lib/warehouses";
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -44,6 +45,9 @@ export async function createOrder(formData: FormData) {
   if ((await currentRole()) !== "admin") return;
   const parsed = parseOrder(formData);
   if (!parsed) return;
+  if (!(await warehouseUsable(parsed.data.warehouseId))) return;
+  // วันส่งย้อนหลังได้ไม่เกิน BACKDATE_DAYS วัน (แก้ไข/เลื่อนวันของออเดอร์เดิมไม่ติดเงื่อนไขนี้)
+  if (parsed.data.deliveryDate.toISOString().slice(0, 10) < earliestDeliveryDate()) return;
 
   await prisma.order.create({
     data: { ...parsed.data, lines: { create: parsed.lines } },
@@ -60,6 +64,7 @@ export async function updateOrder(id: string, formData: FormData) {
 
   const order = await prisma.order.findUnique({ where: { id } });
   if (!order || (order.status !== "CONFIRMED" && order.status !== "FAILED")) return;
+  if (!(await warehouseUsable(parsed.data.warehouseId, order.warehouseId))) return;
 
   await prisma.$transaction([
     prisma.order.update({
