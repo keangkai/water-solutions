@@ -154,7 +154,7 @@ export default async function OrdersPage({
           <Link
             key={key}
             href={filterQuery(key)}
-            className={`flex items-center gap-1.5 px-4 py-2.5 text-sm border-b-2 whitespace-nowrap transition-colors ${
+            className={`flex items-center gap-1.5 px-4 py-2.5 min-h-[44px] text-sm border-b-2 whitespace-nowrap transition-colors ${
               tab === key
                 ? "border-sky-500 text-sky-600 font-medium"
                 : "border-transparent text-slate-500 hover:text-slate-900"

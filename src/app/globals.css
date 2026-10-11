@@ -17,3 +17,25 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/* มือถือ/แท็บเล็ต: ช่องกรอกใช้ฟอนต์ 16px (กัน iOS ซูมหน้าเองตอนโฟกัส) และสูงอย่างน้อย 44px ให้นิ้วกดง่าย */
+@media (pointer: coarse), (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+
+  /* ปุ่มในเนื้อหา: พื้นที่แตะอย่างน้อย 44x44 (ไอคอนลบ/แก้ไขเล็กๆ นิ้วกดยาก) */
+  main button,
+  main summary {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* ข้อความที่มีลิงก์ยาวๆ (เช่น ลิงก์แผนที่ในช่องที่อยู่) ต้องตัดบรรทัด ไม่ดันหน้าจอเลื่อนไปด้านข้าง */
+.wrap-anywhere {
+  overflow-wrap: anywhere;
+}

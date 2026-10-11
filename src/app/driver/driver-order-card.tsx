@@ -80,7 +80,7 @@ export function DriverOrderCard({ order }: { order: DriverOrder }) {
           <div className="flex items-start gap-2 text-slate-700 min-w-0">
             <MapPin className="size-4 shrink-0 mt-0.5 text-slate-400" />
             {order.address ? (
-              <span className="whitespace-pre-line">{order.address}</span>
+              <span className="whitespace-pre-line wrap-anywhere">{order.address}</span>
             ) : (
               <span className="text-amber-700 text-sm">ไม่มีที่อยู่ โทรถามลูกค้า</span>
             )}

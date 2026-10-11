@@ -51,7 +51,7 @@ export function DateInput({
           required
           value={text}
           onChange={(e) => onChange(e.target.value)}
-          className={`${className ?? ""} pr-11`}
+          className={`${className ?? ""} w-full pr-11`}
           aria-invalid={!iso || tooEarly}
           ref={(el) => {
             el?.setCustomValidity(!iso ? "กรอกวันที่เป็น dd/mm/yyyy" : tooEarly ? `เลือกได้ตั้งแต่ ${isoToDisplay(min!)}` : "");

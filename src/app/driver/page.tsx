@@ -140,7 +140,7 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
             {orders.length === 0 ? "ไม่มีงานส่ง" : `เหลือ ${remaining} จาก ${orders.length} ออเดอร์`}
           </div>
           {date !== today && (
-            <Link href="/driver" className="text-xs text-sky-600">
+            <Link href="/driver" className="text-xs text-sky-600 min-h-[44px] inline-flex items-center touch-manipulation">
               กลับไปวันนี้
             </Link>
           )}

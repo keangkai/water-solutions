@@ -103,7 +103,7 @@ export function OrderCard({
         <div className="flex items-start gap-1.5">
           <MapPin className="size-3.5 shrink-0 mt-1 text-slate-400" />
           {address ? (
-            <span className="whitespace-pre-line">{address}</span>
+            <span className="whitespace-pre-line wrap-anywhere min-w-0">{address}</span>
           ) : (
             <span className="text-amber-700">ยังไม่มีที่อยู่</span>
           )}

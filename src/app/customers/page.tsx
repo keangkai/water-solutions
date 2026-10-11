@@ -237,7 +237,7 @@ export default async function CustomersPage({
               <Link
                 key={key}
                 href={pageHref({ sort: key })}
-                className={`px-3 py-1.5 rounded-lg text-xs border transition-colors ${
+                className={`px-3 py-1.5 min-h-[44px] inline-flex items-center rounded-lg text-xs border transition-colors touch-manipulation ${
                   sort === key
                     ? "bg-sky-50 text-sky-700 border-sky-200 font-medium"
                     : "bg-white text-slate-500 border-slate-200 hover:text-slate-900"
@@ -269,7 +269,7 @@ export default async function CustomersPage({
               {customers.map((c) => (
                 <tr key={c.id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 align-top">
                   <td className="py-3 px-4 whitespace-nowrap">
-                    <Link href={`/customers/${c.id}`} className="font-medium text-sky-600 hover:text-sky-700">
+                    <Link href={`/customers/${c.id}`} className="font-medium text-sky-600 hover:text-sky-700 inline-block py-2">
                       {c.name}
                     </Link>
                     {keyIds.has(c.id) && (
@@ -287,7 +287,7 @@ export default async function CustomersPage({
                     </span>
                   </td>
                   <td className="py-3 px-4 text-slate-600 whitespace-nowrap">{c.phone ?? "-"}</td>
-                  <td className="py-3 px-4 text-slate-600 min-w-[160px] whitespace-pre-line">{c.address ?? "-"}</td>
+                  <td className="py-3 px-4 text-slate-600 min-w-[160px] max-w-[280px] whitespace-pre-line wrap-anywhere">{c.address ?? "-"}</td>
                   <td className="py-3 px-4 text-right text-slate-600">{c.orders.toLocaleString()}</td>
                   <td className="py-3 px-4 text-right text-slate-600">{c.qty.toLocaleString()}</td>
                   <td className="py-3 px-4 text-right font-medium text-slate-900">{c.total.toLocaleString()}</td>
