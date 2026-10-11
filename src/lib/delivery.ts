@@ -45,6 +45,14 @@ export function shiftDateKey(key: string, days: number) {
   return dateKey(d);
 }
 
+// ออเดอร์ใหม่เลือกวันส่งย้อนหลังได้ไม่เกินกี่วัน (ไว้บันทึกออเดอร์ที่ส่งไปแล้วย้อนหลัง)
+export const BACKDATE_DAYS = 15;
+
+// วันส่งที่เก่าสุดที่อนุญาตสำหรับออเดอร์ใหม่ ตามเวลาไทย (yyyy-mm-dd)
+export function earliestDeliveryDate(today: string = todayInBangkok()) {
+  return shiftDateKey(today, -BACKDATE_DAYS);
+}
+
 export function mapsUrl(address: string) {
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 }

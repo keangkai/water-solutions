@@ -54,7 +54,7 @@ export function DateInput({
           className={`${className ?? ""} pr-11`}
           aria-invalid={!iso || tooEarly}
           ref={(el) => {
-            el?.setCustomValidity(!iso ? "กรอกวันที่เป็น dd/mm/yyyy" : tooEarly ? "ย้อนหลังไม่ได้" : "");
+            el?.setCustomValidity(!iso ? "กรอกวันที่เป็น dd/mm/yyyy" : tooEarly ? `เลือกได้ตั้งแต่ ${isoToDisplay(min!)}` : "");
           }}
         />
         {/* ไอคอนปฏิทิน: ช่อง date จริงโปร่งใสวางทับ กดแล้วเปิดปฏิทินของเบราว์เซอร์ (ใช้ได้ทั้งมือถือและเดสก์ท็อป) */}

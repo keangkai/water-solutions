@@ -41,6 +41,7 @@ export function OrderForm({
   products,
   warehouses,
   today,
+  minDeliveryDate,
   initialOrder,
   onDone,
 }: {
@@ -48,6 +49,7 @@ export function OrderForm({
   products: OrderProduct[];
   warehouses: OrderWarehouse[];
   today: string;
+  minDeliveryDate?: string; // วันส่งที่เก่าสุดสำหรับออเดอร์ใหม่ กำหนดโดย server
   initialOrder?: InitialOrder;
   onDone?: () => void;
 }) {
@@ -112,7 +114,7 @@ export function OrderForm({
           <label className="text-xs font-medium text-slate-500">วันที่ส่ง</label>
           <DateInput
             name="deliveryDate"
-            min={isEdit ? undefined : today}
+            min={isEdit ? undefined : minDeliveryDate}
             defaultValue={initialOrder ? initialOrder.deliveryDate.toISOString().slice(0, 10) : today}
             className={inputClass}
           />

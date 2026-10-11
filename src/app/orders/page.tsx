@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { OrderForm } from "./order-form";
 import { OrderCard } from "./order-card";
-import { DELIVERY_ROUNDS, isDeliveryRound, todayInBangkok } from "@/lib/delivery";
+import { DELIVERY_ROUNDS, earliestDeliveryDate, isDeliveryRound, todayInBangkok } from "@/lib/delivery";
 import { bkkDay } from "@/lib/report-period";
 import { warehouseOptionsFor } from "@/lib/warehouses";
 import { ClipboardCheck } from "lucide-react";
@@ -81,7 +81,13 @@ export default async function OrdersPage({
       </div>
 
       {canRecord ? (
-        <OrderForm customers={customers} products={products} warehouses={warehouseOptionsFor(warehouses)} today={today} />
+        <OrderForm
+          customers={customers}
+          products={products}
+          warehouses={warehouseOptionsFor(warehouses)}
+          today={today}
+          minDeliveryDate={earliestDeliveryDate(today)}
+        />
       ) : (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-4">
           ต้องมีลูกค้า สินค้า และคลัง ก่อนจึงจะบันทึกออเดอร์ได้
