@@ -5,11 +5,12 @@ import { Pencil, Trash2, ArrowDownToLine, ArrowUpFromLine, Warehouse as Warehous
 import { deleteMovement } from "./actions";
 import { MovementForm } from "./movement-form";
 import { formatDate } from "@/lib/format-date";
+import { deliveryLabel, type DeliveryMethod } from "@/lib/customer-labels";
+import type { PartnerOptions } from "@/lib/movement-partners";
 
 const typeLabel = { IN: "รับเข้า", OUT: "ขายออก" } as const;
 
 type Product = { id: string; name: string; unit: string; defaultCostPrice: number | null; defaultSellPrice: number | null };
-type Partner = { id: string; name: string; type: "SUPPLIER" | "CUSTOMER" };
 type Warehouse = { id: string; name: string };
 type Movement = {
   id: string;
@@ -17,6 +18,7 @@ type Movement = {
   partnerId: string;
   warehouseId: string;
   note: string | null;
+  deliveryMethod: DeliveryMethod | null;
   date: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -28,13 +30,15 @@ type Movement = {
 export function MovementCard({
   movement,
   products,
-  partners,
+  partnerOptions,
   warehouses,
+  today,
 }: {
   movement: Movement;
   products: Product[];
-  partners: Partner[];
+  partnerOptions: PartnerOptions;
   warehouses: Warehouse[];
+  today: string;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -42,8 +46,9 @@ export function MovementCard({
     return (
       <MovementForm
         products={products}
-        partners={partners}
+        partnerOptions={partnerOptions}
         warehouses={warehouses}
+        today={today}
         initialMovement={movement}
         onDone={() => setEditing(false)}
       />
@@ -73,6 +78,7 @@ export function MovementCard({
           <div className="mt-1.5 font-medium text-slate-900">{movement.partner.name}</div>
           <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
             <WarehouseIcon className="size-3" /> {movement.warehouse.name}
+            {movement.deliveryMethod && <span>· {deliveryLabel[movement.deliveryMethod]}</span>}
           </div>
           {movement.note && <div className="text-xs text-slate-400 mt-1">{movement.note}</div>}
         </div>

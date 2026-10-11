@@ -1,29 +1,34 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { MovementType } from "@/generated/prisma/client";
+import { isAdmin } from "@/lib/auth";
+import { MovementType, DeliveryMethod } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
+import { parseLines } from "@/lib/parse-lines";
+import { partnerTypeFor } from "@/lib/movement-partners";
 
-function parseLines(formData: FormData) {
-  const lineMap = new Map<number, { productId?: string; quantity?: number; unitPrice?: number }>();
-  for (const [key, value] of formData.entries()) {
-    const match = key.match(/^lines\.(\d+)\.(productId|quantity|unitPrice)$/);
-    if (!match) continue;
-    const idx = Number(match[1]);
-    const current = lineMap.get(idx) ?? {};
-    if (match[2] === "productId") current.productId = String(value);
-    else if (match[2] === "quantity") current.quantity = Number(value);
-    else current.unitPrice = Number(value);
-    lineMap.set(idx, current);
-  }
+// วิธีรับของเก็บเฉพาะใบขายออก
+function parseDeliveryMethod(formData: FormData, type: MovementType): DeliveryMethod | null {
+  const raw = String(formData.get("deliveryMethod") ?? "");
+  return type === "OUT" && (raw === "DELIVERY" || raw === "PICKUP") ? raw : null;
+}
 
-  return Array.from(lineMap.values()).filter(
-    (l): l is { productId: string; quantity: number; unitPrice: number } =>
-      !!l.productId && typeof l.quantity === "number" && l.quantity > 0 && typeof l.unitPrice === "number" && l.unitPrice >= 0
-  );
+// ตรวจตามกฎใน lib/movement-partners ยกเว้นแก้ใบเก่าที่ไม่ได้เปลี่ยนคู่ค้า
+async function partnerMatchesType(partnerId: string, type: MovementType, existingPartnerId?: string) {
+  if (partnerId === existingPartnerId) return true;
+  const partner = await prisma.partner.findUnique({ where: { id: partnerId }, select: { type: true } });
+  return partner?.type === partnerTypeFor[type];
+}
+
+function revalidateMovementPaths() {
+  revalidatePath("/movements");
+  revalidatePath("/reports");
+  revalidatePath("/customers");
+  revalidatePath("/customers/list");
 }
 
 export async function createMovement(formData: FormData) {
+  if (!(await isAdmin())) return;
   const partnerId = String(formData.get("partnerId") ?? "");
   const warehouseId = String(formData.get("warehouseId") ?? "");
   const type = String(formData.get("type") ?? "") as MovementType;
@@ -31,6 +36,7 @@ export async function createMovement(formData: FormData) {
   const dateRaw = String(formData.get("date") ?? "").trim();
 
   if (!partnerId || !warehouseId || (type !== "IN" && type !== "OUT")) return;
+  if (!(await partnerMatchesType(partnerId, type))) return;
 
   const lines = parseLines(formData);
   if (lines.length === 0) return;
@@ -41,16 +47,17 @@ export async function createMovement(formData: FormData) {
       partnerId,
       warehouseId,
       note,
+      deliveryMethod: parseDeliveryMethod(formData, type),
       ...(dateRaw ? { date: new Date(dateRaw) } : {}),
       lines: { create: lines },
     },
   });
 
-  revalidatePath("/movements");
-  revalidatePath("/reports");
+  revalidateMovementPaths();
 }
 
 export async function updateMovement(id: string, formData: FormData) {
+  if (!(await isAdmin())) return;
   const partnerId = String(formData.get("partnerId") ?? "");
   const warehouseId = String(formData.get("warehouseId") ?? "");
   const type = String(formData.get("type") ?? "") as MovementType;
@@ -58,6 +65,8 @@ export async function updateMovement(id: string, formData: FormData) {
   const dateRaw = String(formData.get("date") ?? "").trim();
 
   if (!partnerId || !warehouseId || (type !== "IN" && type !== "OUT")) return;
+  const existing = await prisma.movement.findUnique({ where: { id }, select: { partnerId: true } });
+  if (!existing || !(await partnerMatchesType(partnerId, type, existing.partnerId))) return;
 
   const lines = parseLines(formData);
   if (lines.length === 0) return;
@@ -70,6 +79,7 @@ export async function updateMovement(id: string, formData: FormData) {
         partnerId,
         warehouseId,
         note,
+        deliveryMethod: parseDeliveryMethod(formData, type),
         ...(dateRaw ? { date: new Date(dateRaw) } : {}),
       },
     }),
@@ -79,12 +89,11 @@ export async function updateMovement(id: string, formData: FormData) {
     }),
   ]);
 
-  revalidatePath("/movements");
-  revalidatePath("/reports");
+  revalidateMovementPaths();
 }
 
 export async function deleteMovement(id: string) {
+  if (!(await isAdmin())) return;
   await prisma.movement.delete({ where: { id } });
-  revalidatePath("/movements");
-  revalidatePath("/reports");
+  revalidateMovementPaths();
 }

@@ -3,6 +3,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { MovementForm } from "./movement-form";
 import { MovementCard } from "./movement-card";
+import { partnerOptionsFor } from "@/lib/movement-partners";
+import { todayInBangkok } from "@/lib/delivery";
 import { ArrowLeftRight, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 
 export default async function MovementsPage({
@@ -10,6 +12,7 @@ export default async function MovementsPage({
 }: {
   searchParams: Promise<{ tab?: string }>;
 }) {
+  const today = todayInBangkok();
   const tab = (await searchParams).tab === "out" ? "OUT" : "IN";
 
   const [products, partners, warehouses, movements] = await Promise.all([
@@ -105,15 +108,23 @@ export default async function MovementsPage({
         <MovementForm
           key={tab}
           products={products}
-          partners={partners}
+          partnerOptions={partnerOptionsFor(partners)}
           warehouses={warehouses}
+          today={today}
           defaultType={tab}
         />
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {visibleMovements.map((m) => (
-          <MovementCard key={m.id} movement={m} products={products} partners={partners} warehouses={warehouses} />
+          <MovementCard
+            key={m.id}
+            movement={m}
+            products={products}
+            partnerOptions={partnerOptionsFor(partners, m.partnerId)}
+            warehouses={warehouses}
+            today={today}
+          />
         ))}
         {visibleMovements.length === 0 && (
           <div className="col-span-full text-center text-slate-400 py-10">

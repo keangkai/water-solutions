@@ -1,8 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Plus, X, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { createMovement, updateMovement } from "./actions";
+import { deliveryLabel, type DeliveryMethod } from "@/lib/customer-labels";
+import type { PartnerOptions } from "@/lib/movement-partners";
+import { bkkDay } from "@/lib/delivery";
 
 type Product = {
   id: string;
@@ -11,11 +15,8 @@ type Product = {
   defaultCostPrice: number | null;
   defaultSellPrice: number | null;
 };
-type Partner = { id: string; name: string; type: "SUPPLIER" | "CUSTOMER" };
 type Warehouse = { id: string; name: string };
 type LineRow = { productId: string; quantity: string; unitPrice: string };
-
-const partnerTypeLabel = { SUPPLIER: "ซัพพลายเออร์", CUSTOMER: "ลูกค้า" } as const;
 
 type InitialMovement = {
   id: string;
@@ -23,6 +24,7 @@ type InitialMovement = {
   partnerId: string;
   warehouseId: string;
   note: string | null;
+  deliveryMethod: DeliveryMethod | null;
   date: Date;
   lines: { productId: string; quantity: number; unitPrice: number }[];
 };
@@ -34,15 +36,17 @@ function defaultPriceFor(product: Product | undefined, t: "IN" | "OUT") {
 
 export function MovementForm({
   products,
-  partners,
+  partnerOptions: allPartnerOptions,
   warehouses,
+  today,
   initialMovement,
   defaultType = "IN",
   onDone,
 }: {
   products: Product[];
-  partners: Partner[];
+  partnerOptions: PartnerOptions;
   warehouses: Warehouse[];
+  today: string; // วันที่ตามเวลาไทย กำหนดโดย server
   initialMovement?: InitialMovement;
   defaultType?: "IN" | "OUT";
   onDone?: () => void;
@@ -87,7 +91,10 @@ export function MovementForm({
 
   const total = rows.reduce((sum, r) => sum + (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0), 0);
   const totalQty = rows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
-  const dateDefault = (initialMovement ? initialMovement.date : new Date()).toISOString().slice(0, 10);
+  const dateDefault = initialMovement ? bkkDay(initialMovement.date) : today;
+
+  // ฝั่ง server เป็นคนกำหนดว่าใบแต่ละประเภทเลือกคู่ค้าใครได้ ที่นี่แค่แสดงตามประเภทที่เลือก
+  const partnerOptions = allPartnerOptions[type];
 
   const action = isEdit ? updateMovement.bind(null, initialMovement!.id) : createMovement;
 
@@ -149,16 +156,28 @@ export function MovementForm({
           </select>
         </div>
         <div className="flex flex-col gap-1 w-full sm:w-auto">
-          <label className="text-xs font-medium text-slate-500">คู่ค้า</label>
+          <div className="flex items-baseline justify-between gap-3">
+            <label className="text-xs font-medium text-slate-500">{type === "OUT" ? "ลูกค้า" : "ซัพพลายเออร์"}</label>
+            <Link href="/partners" className="text-xs text-sky-600 hover:text-sky-700">
+              {partnerOptions.length === 0
+                ? type === "OUT"
+                  ? "ยังไม่มีลูกค้า เพิ่มลูกค้าก่อน"
+                  : "ยังไม่มีซัพพลายเออร์ เพิ่มก่อน"
+                : type === "OUT"
+                  ? "+ ลูกค้าใหม่"
+                  : "+ ซัพพลายเออร์ใหม่"}
+            </Link>
+          </div>
           <select
+            key={type}
             name="partnerId"
             required
             defaultValue={initialMovement?.partnerId}
             className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400"
           >
-            {partners.map((p) => (
+            {partnerOptions.map((p) => (
               <option key={p.id} value={p.id}>
-                {p.name} ({partnerTypeLabel[p.type]})
+                {p.label}
               </option>
             ))}
           </select>
@@ -181,6 +200,29 @@ export function MovementForm({
           />
         </div>
       </div>
+
+      {type === "OUT" && (
+        <div className="flex flex-col gap-1">
+          <span className="text-xs font-medium text-slate-500">การรับของ</span>
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(deliveryLabel) as DeliveryMethod[]).map((method) => (
+              <label
+                key={method}
+                className="inline-flex items-center gap-2 min-h-[44px] px-3 border border-slate-300 rounded-lg text-sm text-black cursor-pointer touch-manipulation has-[:checked]:border-sky-400 has-[:checked]:bg-sky-50 has-[:checked]:text-sky-700"
+              >
+                <input
+                  type="radio"
+                  name="deliveryMethod"
+                  value={method}
+                  defaultChecked={isEdit ? initialMovement!.deliveryMethod === method : method === "DELIVERY"}
+                  className="accent-sky-600"
+                />
+                {deliveryLabel[method]}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <div className="text-xs font-medium text-slate-500">สินค้าในใบนี้ (เลือกได้หลายขนาด)</div>

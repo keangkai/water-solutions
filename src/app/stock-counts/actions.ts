@@ -1,9 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function createStockCount(formData: FormData) {
+  if (!(await isAdmin())) return;
   const warehouseId = String(formData.get("warehouseId") ?? "");
   const productId = String(formData.get("productId") ?? "");
   const dateStr = String(formData.get("date") ?? "");
@@ -43,6 +45,7 @@ export async function createStockCount(formData: FormData) {
 }
 
 export async function deleteStockCount(id: string) {
+  if (!(await isAdmin())) return;
   await prisma.stockCount.delete({ where: { id } });
   revalidatePath("/stock-counts");
 }

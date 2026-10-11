@@ -1,12 +1,55 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
+import { getStockSnapshot, stockKey, totalsByProduct } from "@/lib/stock";
+import Link from "next/link";
+import { buildPeriodReport, defaultKey, parseKey, parseView } from "@/lib/report-period";
+import { PeriodReportView } from "./period-report";
 import { BarChart3, TrendingUp, TrendingDown, Wallet, AlertTriangle, Users } from "lucide-react";
 
-export default async function ReportsPage() {
-  const [products, movements] = await Promise.all([
+const tabs = [
+  { view: null, label: "ภาพรวม" },
+  { view: "day", label: "รายวัน" },
+  { view: "month", label: "รายเดือน" },
+  { view: "year", label: "รายปี" },
+] as const;
+
+export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ view?: string; key?: string }> }) {
+  const params = await searchParams;
+  const view = parseView(params.view);
+  const report = view ? await buildPeriodReport(view, parseKey(view, params.key)) : null;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-2">
+        <BarChart3 className="size-5 text-sky-500" />
+        <h1 className="text-xl font-semibold text-slate-900">รายงาน</h1>
+      </div>
+      <nav className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit" aria-label="ประเภทรายงาน">
+        {tabs.map((t) => (
+          <Link
+            key={t.label}
+            href={t.view ? `/reports?view=${t.view}&key=${defaultKey(t.view)}` : "/reports"}
+            className={`min-h-[44px] px-4 inline-flex items-center rounded-lg text-sm touch-manipulation ${
+              t.view === view ? "bg-white text-slate-900 shadow-sm font-medium" : "text-slate-600"
+            }`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </nav>
+      {report ? <PeriodReportView report={report} /> : <OverviewReport />}
+    </div>
+  );
+}
+
+async function OverviewReport() {
+  const [products, movements, warehouses, snapshot] = await Promise.all([
     prisma.product.findMany({ orderBy: { name: "asc" } }),
     prisma.movement.findMany({ include: { partner: true, lines: { include: { product: true } } } }),
+    prisma.warehouse.findMany({ orderBy: { createdAt: "asc" } }),
+    getStockSnapshot(),
   ]);
+  const reservedTotals = totalsByProduct(snapshot.reserved);
 
   // กระจาย lines ของแต่ละใบให้พกพา type/partner/date ของ movement ติดไปด้วย
   const movementLines = movements.flatMap((m) =>
@@ -37,7 +80,9 @@ export default async function ReportsPage() {
       revenue,
       currentStock: qtyIn - qtyOut,
       realProfit,
-      isLow: qtyIn - qtyOut < product.reorderPoint,
+      reserved: reservedTotals.get(product.id) ?? 0,
+      // ขายได้จริง = คงเหลือ − ยอดจองจากออเดอร์ที่ยังไม่ส่ง
+      isLow: qtyIn - qtyOut - (reservedTotals.get(product.id) ?? 0) < product.reorderPoint,
     };
   });
 
@@ -70,11 +115,6 @@ export default async function ReportsPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-2">
-        <BarChart3 className="size-5 text-sky-500" />
-        <h1 className="text-xl font-semibold text-slate-900">รายงาน</h1>
-      </div>
-
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
           <div className="flex items-center gap-2 text-slate-500 text-sm">
@@ -119,11 +159,50 @@ export default async function ReportsPage() {
               <li key={s.product.id} className="flex justify-between border-b border-red-100 last:border-0 pb-1.5 last:pb-0">
                 <span>{s.product.name}</span>
                 <span>
-                  คงเหลือ <b>{s.currentStock}</b> {s.product.unit} (จุดแจ้งเตือน {s.product.reorderPoint})
+                  ขายได้ <b>{s.currentStock - s.reserved}</b> {s.product.unit} (จุดแจ้งเตือน {s.product.reorderPoint})
                 </span>
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {warehouses.length > 0 && stats.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-sm font-medium text-slate-500">สต็อกรายคลัง</h2>
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-slate-500 bg-slate-50 border-b border-slate-200">
+                  <th className="py-3 px-4 font-medium">สินค้า</th>
+                  {warehouses.map((w) => (
+                    <th key={w.id} className="py-3 px-4 font-medium text-right">{w.name}</th>
+                  ))}
+                  <th className="py-3 px-4 font-medium text-right">จอง (รอส่ง)</th>
+                  <th className="py-3 px-4 font-medium text-right">ขายได้จริง</th>
+                </tr>
+              </thead>
+              <tbody>
+                {stats.map((s) => (
+                  <tr key={s.product.id} className="border-b border-slate-100 last:border-0">
+                    <td className="py-3 px-4 font-medium text-slate-900 whitespace-nowrap">{s.product.name}</td>
+                    {warehouses.map((w) => {
+                      const qty = snapshot.onHand.get(stockKey(s.product.id, w.id)) ?? 0;
+                      return (
+                        <td key={w.id} className={`py-3 px-4 text-right ${qty < 0 ? "text-red-600 font-medium" : "text-slate-600"}`}>
+                          {qty.toLocaleString()}
+                        </td>
+                      );
+                    })}
+                    <td className="py-3 px-4 text-right text-slate-600">{s.reserved.toLocaleString()}</td>
+                    <td className={`py-3 px-4 text-right font-medium ${s.isLow ? "text-red-600" : "text-slate-900"}`}>
+                      {(s.currentStock - s.reserved).toLocaleString()} {s.product.unit}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
 

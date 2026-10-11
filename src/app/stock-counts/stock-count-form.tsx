@@ -12,9 +12,11 @@ type Product = { id: string; name: string; unit: string };
 export function StockCountForm({
   warehouses,
   products,
+  today,
 }: {
   warehouses: Warehouse[];
   products: Product[];
+  today: string; // วันที่ตามเวลาไทย กำหนดโดย server
 }) {
   const [rows, setRows] = useState([{ label: "", quantity: "" }]);
 
@@ -24,7 +26,6 @@ export function StockCountForm({
     setRows((r) => r.map((row, idx) => (idx === i ? { ...row, [field]: value } : row)));
 
   const total = rows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
-  const today = new Date().toISOString().slice(0, 10);
 
   return (
     <form

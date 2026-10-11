@@ -1,9 +1,11 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { isAdmin } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 export async function createWarehouse(formData: FormData) {
+  if (!(await isAdmin())) return;
   const name = String(formData.get("name") ?? "").trim();
   if (!name) return;
 
@@ -15,6 +17,7 @@ export async function createWarehouse(formData: FormData) {
 }
 
 export async function deleteWarehouse(id: string) {
+  if (!(await isAdmin())) return;
   await prisma.warehouse.delete({ where: { id } });
   revalidatePath("/warehouses");
   revalidatePath("/movements");
