@@ -50,6 +50,11 @@ async function OverviewReport() {
     getStockSnapshot(),
   ]);
   const reservedTotals = totalsByProduct(snapshot.reserved);
+  // คลังที่ปิดแล้วและไม่มีสต็อกเหลือ ไม่ต้องแสดงเป็นคอลัมน์
+  const warehousesWithStock = new Set(
+    [...snapshot.onHand].filter(([, qty]) => qty !== 0).map(([key]) => key.split("|")[1])
+  );
+  const visibleWarehouses = warehouses.filter((w) => w.isActive || warehousesWithStock.has(w.id));
 
   // กระจาย lines ของแต่ละใบให้พกพา type/partner/date ของ movement ติดไปด้วย
   const movementLines = movements.flatMap((m) =>
@@ -167,7 +172,7 @@ async function OverviewReport() {
         </section>
       )}
 
-      {warehouses.length > 0 && stats.length > 0 && (
+      {visibleWarehouses.length > 0 && stats.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-sm font-medium text-slate-500">สต็อกรายคลัง</h2>
           <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto">
@@ -175,8 +180,8 @@ async function OverviewReport() {
               <thead>
                 <tr className="text-left text-slate-500 bg-slate-50 border-b border-slate-200">
                   <th className="py-3 px-4 font-medium">สินค้า</th>
-                  {warehouses.map((w) => (
-                    <th key={w.id} className="py-3 px-4 font-medium text-right">{w.name}</th>
+                  {visibleWarehouses.map((w) => (
+                    <th key={w.id} className="py-3 px-4 font-medium text-right">{w.isActive ? w.name : `${w.name} (ปิด)`}</th>
                   ))}
                   <th className="py-3 px-4 font-medium text-right">จอง (รอส่ง)</th>
                   <th className="py-3 px-4 font-medium text-right">ขายได้จริง</th>
@@ -186,7 +191,7 @@ async function OverviewReport() {
                 {stats.map((s) => (
                   <tr key={s.product.id} className="border-b border-slate-100 last:border-0">
                     <td className="py-3 px-4 font-medium text-slate-900 whitespace-nowrap">{s.product.name}</td>
-                    {warehouses.map((w) => {
+                    {visibleWarehouses.map((w) => {
                       const qty = snapshot.onHand.get(stockKey(s.product.id, w.id)) ?? 0;
                       return (
                         <td key={w.id} className={`py-3 px-4 text-right ${qty < 0 ? "text-red-600 font-medium" : "text-slate-600"}`}>

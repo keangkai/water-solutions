@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { todayInBangkok } from "@/lib/delivery";
 import { formatDate } from "@/lib/format-date";
 import { TransferForm } from "./transfer-form";
+import { warehouseOptionsFor } from "@/lib/warehouses";
 import { deleteTransfer } from "./actions";
 import { Repeat, ArrowRight, Trash2 } from "lucide-react";
 
@@ -26,8 +27,13 @@ export default async function TransfersPage() {
         ใช้เมื่อย้ายของจากคลังหนึ่งไปอีกคลัง ยอดรวมและกำไรไม่เปลี่ยน มีผลแค่สต็อกรายคลัง
       </p>
 
-      {warehouses.length >= 2 && products.length > 0 ? (
-        <TransferForm warehouses={warehouses} products={products} today={todayInBangkok()} />
+      {warehouses.length >= 2 && warehouses.some((w) => w.isActive) && products.length > 0 ? (
+        <TransferForm
+          fromWarehouses={warehouses.map((w) => ({ id: w.id, name: w.isActive ? w.name : `${w.name} (ปิดใช้งาน)` }))}
+          toWarehouses={warehouseOptionsFor(warehouses)}
+          products={products}
+          today={todayInBangkok()}
+        />
       ) : (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-4">
           ต้องมีอย่างน้อย 2 คลังและ 1 สินค้า จึงจะโอนย้ายได้

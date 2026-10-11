@@ -12,17 +12,19 @@ const field =
   "w-full border border-slate-300 rounded-xl px-3 min-h-[44px] text-base text-black focus:outline-none focus:ring-2 focus:ring-sky-200";
 
 export function TransferForm({
-  warehouses,
+  fromWarehouses,
+  toWarehouses,
   products,
   today,
 }: {
-  warehouses: Option[];
+  fromWarehouses: Option[]; // ต้นทางเลือกได้ทุกคลัง รวมคลังที่ปิดแล้ว (เพื่อย้ายของออก)
+  toWarehouses: Option[]; // ปลายทางเฉพาะคลังที่เปิดใช้งาน
   products: (Option & { unit: string })[];
   today: string;
 }) {
   const [rows, setRows] = useState<Row[]>([{ productId: products[0]?.id ?? "", quantity: "" }]);
-  const [from, setFrom] = useState(warehouses[0]?.id ?? "");
-  const [to, setTo] = useState(warehouses[1]?.id ?? "");
+  const [from, setFrom] = useState(fromWarehouses[0]?.id ?? "");
+  const [to, setTo] = useState(toWarehouses.find((w) => w.id !== fromWarehouses[0]?.id)?.id ?? toWarehouses[0]?.id ?? "");
   const [formKey, setFormKey] = useState(0);
 
   const update = (i: number, patch: Partial<Row>) => setRows((r) => r.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
@@ -41,7 +43,7 @@ export function TransferForm({
         <label className="space-y-1 text-sm text-slate-600">
           จากคลัง
           <select name="fromWarehouseId" value={from} onChange={(e) => setFrom(e.target.value)} className={field}>
-            {warehouses.map((w) => (
+            {fromWarehouses.map((w) => (
               <option key={w.id} value={w.id}>{w.name}</option>
             ))}
           </select>
@@ -49,7 +51,7 @@ export function TransferForm({
         <label className="space-y-1 text-sm text-slate-600">
           ไปคลัง
           <select name="toWarehouseId" value={to} onChange={(e) => setTo(e.target.value)} className={field}>
-            {warehouses.map((w) => (
+            {toWarehouses.map((w) => (
               <option key={w.id} value={w.id}>{w.name}</option>
             ))}
           </select>

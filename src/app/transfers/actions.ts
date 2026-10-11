@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { isAdmin } from "@/lib/auth";
+import { warehouseUsable } from "@/lib/warehouses";
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -20,6 +21,7 @@ export async function createTransfer(formData: FormData) {
   const dateRaw = String(formData.get("date") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim() || null;
   if (!fromWarehouseId || !toWarehouseId || fromWarehouseId === toWarehouseId) return;
+  if (!(await warehouseUsable(toWarehouseId))) return;
 
   // รวมแถวสินค้าซ้ำเข้าด้วยกัน
   const quantities = new Map<string, number>();

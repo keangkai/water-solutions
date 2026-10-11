@@ -128,7 +128,11 @@ export default async function StockCountsPage() {
           ต้องเพิ่มคลังและสินค้าก่อนจึงจะบันทึกผลนับได้
         </div>
       ) : (
-        <StockCountForm warehouses={warehouses} products={products} today={todayInBangkok()} />
+        <StockCountForm
+          warehouses={warehouses.map((w) => ({ id: w.id, name: w.isActive ? w.name : `${w.name} (ปิดใช้งาน)` }))}
+          products={products}
+          today={todayInBangkok()}
+        />
       )}
 
       <div className="space-y-3">

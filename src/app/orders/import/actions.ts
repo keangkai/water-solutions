@@ -6,6 +6,7 @@ import { isAdmin } from "@/lib/auth";
 import { isDeliveryRound } from "@/lib/delivery";
 import { coordsFromMapLink } from "@/lib/maps-link";
 import { digitsOnly, parseOrderSheet } from "@/lib/parse-sheet";
+import { warehouseUsable } from "@/lib/warehouses";
 
 export type PreviewRow = {
   rowNo: number;
@@ -41,7 +42,7 @@ export async function importOrders(_: unknown, formData: FormData): Promise<Impo
     const id = String(formData.get(`product.${h}`) ?? "");
     if (id) productBySize.set(h, id);
   }
-  if (!warehouseId) return { error: "เลือกคลังที่ขึ้นของ" };
+  if (!warehouseId || !(await warehouseUsable(warehouseId))) return { error: "เลือกคลังที่ขึ้นของ (ต้องเป็นคลังที่เปิดใช้งาน)" };
   if (!isDeliveryRound(round)) return { error: "เลือกรอบจัดส่ง" };
   if (!(price >= 0)) return { error: "ใส่ราคาขายต่อแพ็ค" };
   const usedHeaders = new Set(sheet.rows.flatMap((r) => Object.keys(r.sizes)));
