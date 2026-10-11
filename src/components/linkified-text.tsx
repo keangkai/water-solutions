@@ -15,6 +15,21 @@ function isMapLink(raw: string) {
   }
 }
 
+// ลิงก์ Google Maps แรกในข้อความ (ถ้ามี) ไว้ใช้กับปุ่ม "แผนที่" เปิดตรงจุดแทนการค้นหาด้วยข้อความ
+export function firstMapLink(text: string | null | undefined) {
+  if (!text) return null;
+  for (const m of text.matchAll(URL_RE)) {
+    const href = m[0].replace(/[),.;:!?]+$/, "");
+    if (isMapLink(href)) return href;
+  }
+  return null;
+}
+
+// ข้อความที่อยู่ที่ตัดลิงก์ออก ไว้ใช้ค้นหาในแผนที่
+export function addressWithoutLinks(text: string) {
+  return text.replace(URL_RE, " ").replace(/\s+/g, " ").trim();
+}
+
 // แสดงข้อความ โดยลิงก์ http(s) ในข้อความกลายเป็นลิงก์ที่กดได้ (ลิงก์แผนที่แสดงเป็นปุ่ม "เปิดใน Google Maps")
 export function LinkifiedText({ text }: { text: string }) {
   const parts = text.split(URL_RE); // ตำแหน่งคี่คือ URL ที่จับได้

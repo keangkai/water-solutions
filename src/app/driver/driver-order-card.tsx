@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Phone, MapPin, Navigation, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { deliverOrder, failOrder } from "./actions";
 import { mapsUrl, orderStatusInfo, type OrderStatus } from "@/lib/delivery";
-import { LinkifiedText } from "@/components/linkified-text";
+import { LinkifiedText, addressWithoutLinks, firstMapLink } from "@/components/linkified-text";
 
 export type DriverOrder = {
   id: string;
@@ -91,10 +91,13 @@ export function DriverOrderCard({ order }: { order: DriverOrder }) {
             <a
               href={
                 order.mapUrl ??
-                (order.coords ? mapsUrl(`${order.coords.latitude},${order.coords.longitude}`) : mapsUrl(order.address!))
+                firstMapLink(order.address) ??
+                (order.coords
+                  ? mapsUrl(`${order.coords.latitude},${order.coords.longitude}`)
+                  : mapsUrl(addressWithoutLinks(order.address!) || order.address!))
               }
               target="_blank"
-              rel="noreferrer"
+              rel="noopener noreferrer"
               className={`${bigButton} shrink-0 inline-flex items-center gap-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50`}
             >
               <Navigation className="size-4" /> แผนที่
