@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CalendarDays } from "lucide-react";
 
 const isoToDisplay = (iso: string) => {
   const [y, m, d] = iso.split("-");
@@ -16,7 +17,7 @@ const displayToIso = (value: string) => {
   return valid ? `${y}-${m}-${d}` : "";
 };
 
-// ช่องกรอกวันที่รูปแบบ dd/mm/yyyy ส่งค่า yyyy-mm-dd ผ่าน hidden input ชื่อเดียวกัน
+// ช่องกรอกวันที่รูปแบบ dd/mm/yyyy (พิมพ์เองหรือกดไอคอนเลือกจากปฏิทิน) ส่งค่า yyyy-mm-dd ผ่าน hidden input ชื่อเดียวกัน
 export function DateInput({
   name,
   defaultValue,
@@ -41,20 +42,41 @@ export function DateInput({
   return (
     <>
       <input type="hidden" name={name} value={iso} />
-      <input
-        type="text"
-        inputMode="numeric"
-        placeholder="dd/mm/yyyy"
-        maxLength={10}
-        required
-        value={text}
-        onChange={(e) => onChange(e.target.value)}
-        className={className}
-        aria-invalid={!iso || tooEarly}
-        ref={(el) => {
-          el?.setCustomValidity(!iso ? "กรอกวันที่เป็น dd/mm/yyyy" : tooEarly ? "ย้อนหลังไม่ได้" : "");
-        }}
-      />
+      <div className="relative">
+        <input
+          type="text"
+          inputMode="numeric"
+          placeholder="dd/mm/yyyy"
+          maxLength={10}
+          required
+          value={text}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${className ?? ""} pr-11`}
+          aria-invalid={!iso || tooEarly}
+          ref={(el) => {
+            el?.setCustomValidity(!iso ? "กรอกวันที่เป็น dd/mm/yyyy" : tooEarly ? "ย้อนหลังไม่ได้" : "");
+          }}
+        />
+        {/* ไอคอนปฏิทิน: ช่อง date จริงโปร่งใสวางทับ กดแล้วเปิดปฏิทินของเบราว์เซอร์ (ใช้ได้ทั้งมือถือและเดสก์ท็อป) */}
+        <div className="absolute inset-y-0 right-0 w-11 flex items-center justify-center text-slate-400">
+          <CalendarDays className="size-5" aria-hidden />
+          <input
+            type="date"
+            value={iso}
+            min={min}
+            aria-label="เลือกวันที่จากปฏิทิน"
+            onChange={(e) => e.target.value && setText(isoToDisplay(e.target.value))}
+            onClick={(e) => {
+              try {
+                e.currentTarget.showPicker?.();
+              } catch {
+                // เบราว์เซอร์ที่ไม่รองรับ จะเปิดจากตัวช่องเองอยู่แล้ว
+              }
+            }}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer [&::-webkit-calendar-picker-indicator]:absolute [&::-webkit-calendar-picker-indicator]:inset-0 [&::-webkit-calendar-picker-indicator]:w-full [&::-webkit-calendar-picker-indicator]:h-full [&::-webkit-calendar-picker-indicator]:cursor-pointer"
+          />
+        </div>
+      </div>
     </>
   );
 }
