@@ -5,6 +5,7 @@ import { Pencil, Phone, MapPin, Warehouse as WarehouseIcon, AlertTriangle } from
 import { cancelOrder, setOrderPaid } from "./actions";
 import { OrderForm, type OrderCustomer, type OrderProduct, type OrderWarehouse } from "./order-form";
 import { formatDate } from "@/lib/format-date";
+import { LinkifiedText } from "@/components/linkified-text";
 import { orderStatusInfo, roundLabel, type OrderStatus } from "@/lib/delivery";
 
 export type OrderCardData = {
@@ -103,7 +104,7 @@ export function OrderCard({
         <div className="flex items-start gap-1.5">
           <MapPin className="size-3.5 shrink-0 mt-1 text-slate-400" />
           {address ? (
-            <span className="whitespace-pre-line wrap-anywhere min-w-0">{address}</span>
+            <span className="whitespace-pre-line wrap-anywhere min-w-0"><LinkifiedText text={address} /></span>
           ) : (
             <span className="text-amber-700">ยังไม่มีที่อยู่</span>
           )}

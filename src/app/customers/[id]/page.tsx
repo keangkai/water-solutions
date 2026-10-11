@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/format-date";
 import { segmentLabel, deliveryLabel } from "@/lib/customer-labels";
 import { behaviorInfo, classifyBehavior } from "@/lib/customer-behavior";
 import { ArrowLeft, Phone, MapPin, Warehouse as WarehouseIcon } from "lucide-react";
+import { LinkifiedText } from "@/components/linkified-text";
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -69,7 +70,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           {customer.address && (
             <div className="flex items-start gap-1.5">
               <MapPin className="size-3.5 mt-0.5 shrink-0" />
-              <span className="whitespace-pre-line wrap-anywhere">{customer.address}</span>
+              <span className="whitespace-pre-line wrap-anywhere"><LinkifiedText text={customer.address} /></span>
             </div>
           )}
         </div>

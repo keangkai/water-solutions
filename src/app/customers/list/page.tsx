@@ -5,6 +5,7 @@ import { formatDate } from "@/lib/format-date";
 import { segmentLabel, type CustomerSegment } from "@/lib/customer-labels";
 import { behaviorInfo, classifyBehavior } from "@/lib/customer-behavior";
 import { Contact, Search, Phone, MapPin } from "lucide-react";
+import { LinkifiedText } from "@/components/linkified-text";
 
 // รายชื่อลูกค้าพร้อมข้อมูลติดต่อและสรุปการซื้อ ค้นหาจากชื่อ เบอร์ ที่อยู่ หรือโซน
 async function loadCustomerList() {
@@ -174,7 +175,7 @@ export default async function CustomerListPage({
                 <div className="flex items-start gap-1.5">
                   <MapPin className="size-3.5 shrink-0 mt-1 text-slate-400" />
                   {c.address ? (
-                    <span className="whitespace-pre-line wrap-anywhere">{c.address}</span>
+                    <span className="whitespace-pre-line wrap-anywhere"><LinkifiedText text={c.address} /></span>
                   ) : (
                     <span className="text-slate-400">ไม่มีที่อยู่</span>
                   )}

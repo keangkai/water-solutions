@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Phone, MapPin, Navigation, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { deliverOrder, failOrder } from "./actions";
 import { mapsUrl, orderStatusInfo, type OrderStatus } from "@/lib/delivery";
+import { LinkifiedText } from "@/components/linkified-text";
 
 export type DriverOrder = {
   id: string;
@@ -13,6 +14,7 @@ export type DriverOrder = {
   phone: string | null;
   address: string | null;
   coords: { latitude: number; longitude: number } | null;
+  mapUrl: string | null; // ลิงก์แผนที่ที่ลูกค้าส่งมา (ถ้ามี) เปิดตรงจุดและเข้าแอป Google Maps ได้
   note: string | null;
   issueReason: string | null;
   total: number;
@@ -80,14 +82,17 @@ export function DriverOrderCard({ order }: { order: DriverOrder }) {
           <div className="flex items-start gap-2 text-slate-700 min-w-0">
             <MapPin className="size-4 shrink-0 mt-0.5 text-slate-400" />
             {order.address ? (
-              <span className="whitespace-pre-line wrap-anywhere">{order.address}</span>
+              <span className="whitespace-pre-line wrap-anywhere"><LinkifiedText text={order.address} /></span>
             ) : (
               <span className="text-amber-700 text-sm">ไม่มีที่อยู่ โทรถามลูกค้า</span>
             )}
           </div>
-          {(order.coords || order.address) && (
+          {(order.mapUrl || order.coords || order.address) && (
             <a
-              href={order.coords ? mapsUrl(`${order.coords.latitude},${order.coords.longitude}`) : mapsUrl(order.address!)}
+              href={
+                order.mapUrl ??
+                (order.coords ? mapsUrl(`${order.coords.latitude},${order.coords.longitude}`) : mapsUrl(order.address!))
+              }
               target="_blank"
               rel="noreferrer"
               className={`${bigButton} shrink-0 inline-flex items-center gap-1.5 border border-slate-300 text-slate-700 hover:bg-slate-50`}
