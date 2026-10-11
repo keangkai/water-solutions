@@ -44,7 +44,8 @@ export function PeriodReportView({ report }: { report: PeriodReport }) {
   const today = todayInBangkok();
 
   // รายวันที่ไม่มีออเดอร์ ยอดขาย หรือค่าใช้จ่ายเลย: แสดงข้อความแทนการ์ดเลข 0 พร้อมทางลัดไปวันที่มีข้อมูล
-  const isEmpty = view === "day" && report.orderCounts.total === 0 && report.qty === 0 && report.expenses === 0;
+  const hasData = report.orderCounts.total > 0 || report.qty > 0 || report.expenses > 0;
+  const isEmpty = view === "day" && !hasData;
   const daysWithData = report.options.filter((o) => o.count > 0).map((o) => o.key);
   const prevDay = daysWithData.filter((k) => k < key).sort().pop();
   const nextDay = daysWithData.filter((k) => k > key).sort()[0];
@@ -53,12 +54,14 @@ export function PeriodReportView({ report }: { report: PeriodReport }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center gap-2">
         <PeriodSelect view={view} value={key} options={report.options} />
+        {hasData && (
         <a
           href={`/reports/export?view=${view}&key=${key}`}
           className="min-h-[44px] px-4 inline-flex items-center gap-1.5 rounded-xl text-sm border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 touch-manipulation active:scale-95 sm:ml-auto"
         >
           <Download className="size-4" /> ส่งออก CSV
         </a>
+        )}
         {view === "day" &&
           [
             ["เมื่อวาน", shiftDateKey(today, -1)],
