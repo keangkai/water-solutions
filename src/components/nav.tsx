@@ -47,10 +47,13 @@ const navLinks = [
 export function Nav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [lastPath, setLastPath] = useState(pathname);
 
-  useEffect(() => {
+  // เปลี่ยนหน้าแล้วปิดเมนู (ปรับ state ระหว่าง render แทน setState ใน effect)
+  if (lastPath !== pathname) {
+    setLastPath(pathname);
     setOpen(false);
-  }, [pathname]);
+  }
 
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : "";

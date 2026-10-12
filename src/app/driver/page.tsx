@@ -35,6 +35,9 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
     load.set(key, entry);
   }
   const loadList = Array.from(load.values()).sort((a, b) => a.label.localeCompare(b.label));
+  // จำนวนแพ็ครวมทุกขนาด: ที่ต้องโหลดขึ้นรถ (ยังไม่ส่ง) และทั้งหมดของวัน (ทุกสถานะ)
+  const loadTotal = loadList.reduce((sum, item) => sum + item.qty, 0);
+  const dayTotal = orders.reduce((sum, o) => sum + o.lines.reduce((s, l) => s + l.quantity, 0), 0);
 
   // สรุปงานของวัน: ส่งสำเร็จกี่แพ็ค ต้องนำกลับกี่แพ็ค (ส่งไม่ครบ + ส่งไม่ได้) และยอดที่ต้องเก็บ
   const closed = orders.filter((o) => o.status !== "CONFIRMED");
@@ -95,7 +98,12 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
       const roundOrders = orders.filter((o) => o.deliveryRound === key);
       // ที่ยังไม่ได้ส่งขึ้นก่อน
       roundOrders.sort((a, b) => Number(a.status !== "CONFIRMED") - Number(b.status !== "CONFIRMED"));
-      return { key, orders: roundOrders.map(toCard), remaining: roundOrders.filter((o) => o.status === "CONFIRMED").length };
+      return {
+        key,
+        orders: roundOrders.map(toCard),
+        remaining: roundOrders.filter((o) => o.status === "CONFIRMED").length,
+        packs: roundOrders.reduce((sum, o) => sum + o.lines.reduce((s, l) => s + l.quantity, 0), 0),
+      };
     })
     .filter((r) => r.orders.length > 0);
 
@@ -138,7 +146,9 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
           <div className="text-lg font-semibold text-slate-900">{formatDate(new Date(date))}</div>
           <div className="text-xs text-slate-500">
             {dayLabel && <>{dayLabel} · </>}
-            {orders.length === 0 ? "ไม่มีงานส่ง" : `เหลือ ${remaining} จาก ${orders.length} ออเดอร์`}
+            {orders.length === 0
+              ? "ไม่มีงานส่ง"
+              : `เหลือ ${remaining} จาก ${orders.length} ออเดอร์ · รวม ${dayTotal.toLocaleString()} แพ็ค`}
           </div>
           {date !== today && (
             <Link href="/driver" className="text-xs text-sky-600 min-h-[44px] inline-flex items-center touch-manipulation">
@@ -169,6 +179,12 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
               </div>
             ))}
           </div>
+          <div className="mt-2 flex items-baseline justify-between bg-sky-600 text-white rounded-xl px-4 py-2.5">
+            <span className="text-sm">รวมทุกขนาดที่ต้องส่ง</span>
+            <span className="text-2xl font-semibold">
+              {loadTotal.toLocaleString()} <span className="text-sm font-normal">แพ็ค</span>
+            </span>
+          </div>
         </div>
       )}
 
@@ -176,7 +192,9 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
         <section key={r.key} className="space-y-3">
           <h2 className="flex items-baseline justify-between text-sm font-medium text-slate-500 px-1">
             <span className="text-base text-slate-900">รอบ {roundLabel(r.key)}</span>
-            <span>{r.remaining > 0 ? `เหลือ ${r.remaining} ออเดอร์` : "ส่งครบรอบนี้แล้ว"}</span>
+            <span>
+              {r.remaining > 0 ? `เหลือ ${r.remaining} ออเดอร์` : "ส่งครบรอบนี้แล้ว"} · {r.packs.toLocaleString()} แพ็ค
+            </span>
           </h2>
           {r.orders.map((o) => (
             <DriverOrderCard key={o.id} order={o} />
@@ -219,6 +237,11 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
                   <td className={`py-1.5 text-right ${r.back > 0 ? "text-amber-700 font-medium" : "text-slate-400"}`}>{r.back}</td>
                 </tr>
               ))}
+              <tr className="font-semibold text-slate-900 border-t border-slate-200">
+                <td className="py-1.5">รวมทุกขนาด</td>
+                <td className="py-1.5 text-right">{summaryList.reduce((n, r) => n + r.delivered, 0).toLocaleString()} แพ็ค</td>
+                <td className="py-1.5 text-right">{summaryList.reduce((n, r) => n + r.back, 0).toLocaleString()}</td>
+              </tr>
             </tbody>
           </table>
           <div className="flex items-baseline justify-between text-sm pt-1">

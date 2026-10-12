@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { isAdmin } from "@/lib/auth";
-import { isDeliveryRound } from "@/lib/delivery";
+import { bkkDay, isDeliveryRound, shiftDateKey } from "@/lib/delivery";
 import { coordsFromMapLink } from "@/lib/maps-link";
 import { digitsOnly, parseOrderSheet } from "@/lib/parse-sheet";
 import { warehouseUsable } from "@/lib/warehouses";
@@ -16,6 +16,7 @@ export type PreviewRow = {
   deliveryDate: string | null;
   customer: "existing" | "new";
   skip: string | null; // เหตุผลที่แถวนี้จะไม่ถูกนำเข้า
+  warned: boolean; // มีใบขายออกที่หน้าตาเหมือนกัน (วันเดียวกัน ±1 วัน จำนวนต่อสินค้าเท่ากัน) ผูกกับคู่ค้าอื่น อาจเป็นรายการเดียวกัน
 };
 
 export type ImportResult =
@@ -36,6 +37,7 @@ export async function importOrders(_: unknown, formData: FormData): Promise<Impo
   const price = Number(formData.get("unitPrice"));
   const cost = Number(formData.get("costPrice"));
   const setDefaults = formData.get("setDefaults") === "1";
+  const includeWarned = formData.get("includeWarned") === "1";
 
   const productBySize = new Map<string, string>();
   for (const h of sheet.sizeHeaders) {
@@ -73,6 +75,42 @@ export async function importOrders(_: unknown, formData: FormData): Promise<Impo
     )
   );
 
+  // ใบขายออกเดิมที่ไม่ได้มาจากออเดอร์ (บันทึกมือ มักผูกกับคู่ค้าอื่น) ไว้เตือนว่าอาจเป็นรายการเดียวกับแถวในไฟล์
+  const sheetDays = sheet.rows.map((r) => r.deliveryDate).filter((d): d is string => !!d).sort();
+  const lookalikes = new Map<string, string>();
+  if (sheetDays.length > 0) {
+    const nearby = await prisma.movement.findMany({
+      where: {
+        type: "OUT",
+        order: null,
+        date: { gte: new Date(shiftDateKey(sheetDays[0], -2)), lte: new Date(shiftDateKey(sheetDays[sheetDays.length - 1], 3)) },
+      },
+      select: { date: true, partner: { select: { name: true } }, lines: { select: { productId: true, quantity: true } } },
+    });
+    const signature = (lines: { productId: string; quantity: number }[]) =>
+      lines
+        .map((l) => `${l.productId}:${l.quantity}`)
+        .sort()
+        .join(",");
+    for (const m of nearby) lookalikes.set(`${bkkDay(m.date)}|${signature(m.lines)}`, m.partner.name);
+  }
+  const lookalikeFor = (row: (typeof sheet.rows)[number]) => {
+    const lines = Object.entries(row.sizes).map(([header, quantity]) => ({ productId: productBySize.get(header)!, quantity }));
+    const sig = lines
+      .map((l) => `${l.productId}:${l.quantity}`)
+      .sort()
+      .join(",");
+    for (const offset of [0, -1, 1]) {
+      const day = shiftDateKey(row.deliveryDate!, offset);
+      const partnerName = lookalikes.get(`${day}|${sig}`);
+      if (partnerName) {
+        const total = lines.reduce((s, l) => s + l.quantity, 0);
+        return `มีใบขายออกของ "${partnerName}" วันที่ ${day.split("-").reverse().join("/")} จำนวนเท่ากัน (${total} แพ็ค) อาจเป็นรายการเดียวกัน`;
+      }
+    }
+    return null;
+  };
+
   if (mode === "import" && setDefaults) {
     const ids = Array.from(new Set(productBySize.values()));
     // ตั้งเฉพาะสินค้าที่ยังไม่มีราคา ไม่ทับราคาที่ตั้งไว้แล้ว
@@ -108,7 +146,7 @@ export async function importOrders(_: unknown, formData: FormData): Promise<Impo
     const orderDate = row.orderDate ?? row.deliveryDate;
     const base = { rowNo: row.rowNo, name: row.name, sizes: row.sizes, orderDate, deliveryDate: row.deliveryDate };
     if (row.errors.length > 0) {
-      out.push({ ...base, customer: "existing", skip: row.errors.join(", ") });
+      out.push({ ...base, customer: "existing", skip: row.errors.join(", "), warned: false });
       continue;
     }
 
@@ -117,11 +155,16 @@ export async function importOrders(_: unknown, formData: FormData): Promise<Impo
     const key = (partnerId: string) => orderKey(partnerId, row.deliveryDate!, orderDate!, qty);
 
     if (customer && seen.has(key(customer.id))) {
-      out.push({ ...base, customer: "existing", skip: "มีออเดอร์นี้ในระบบแล้ว (ลูกค้า วันที่ และจำนวนตรงกัน)" });
+      out.push({ ...base, customer: "existing", skip: "มีออเดอร์นี้ในระบบแล้ว (ลูกค้า วันที่ และจำนวนตรงกัน)", warned: false });
+      continue;
+    }
+    const lookalike = lookalikeFor(row);
+    if (lookalike && !includeWarned) {
+      out.push({ ...base, customer: isNew ? "new" : "existing", skip: lookalike, warned: true });
       continue;
     }
     if (mode === "preview") {
-      out.push({ ...base, customer: isNew ? "new" : "existing", skip: null });
+      out.push({ ...base, customer: isNew ? "new" : "existing", skip: null, warned: !!lookalike });
       continue;
     }
 
@@ -188,9 +231,9 @@ export async function importOrders(_: unknown, formData: FormData): Promise<Impo
       });
       seen.add(key(customer.id));
       imported++;
-      out.push({ ...base, customer: isNew ? "new" : "existing", skip: null });
+      out.push({ ...base, customer: isNew ? "new" : "existing", skip: null, warned: !!lookalike });
     } catch {
-      out.push({ ...base, customer: isNew ? "new" : "existing", skip: "บันทึกไม่สำเร็จ" });
+      out.push({ ...base, customer: isNew ? "new" : "existing", skip: "บันทึกไม่สำเร็จ", warned: !!lookalike });
     }
   }
 

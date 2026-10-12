@@ -80,7 +80,7 @@ export type PeriodReport = {
   saleLines: SaleLine[];
   expenseByCategory: { category: string; amount: number }[];
   // กราฟแท่ง: รายวันในเดือน หรือรายเดือนในปี
-  series: { label: string; revenue: number; profit: number }[];
+  series: { label: string; revenue: number; profit: number; expenses: number; net: number }[];
   orders: PeriodOrder[]; // เฉพาะมุมมองรายวัน
   issues: PeriodOrder[]; // ส่งไม่ครบ/ส่งไม่ได้ ในช่วงนี้
 };
@@ -138,7 +138,7 @@ export async function buildPeriodReport(view: PeriodView, key: string): Promise<
   // ยอดขาย: นับจากใบขายออกตามวันที่ส่งจริง
   const sizeMap = new Map<string, SizeRow>();
   const customerMap = new Map<string, { name: string; revenue: number; qty: number }>();
-  const seriesMap = new Map<string, { revenue: number; profit: number }>();
+  const seriesMap = new Map<string, { revenue: number; profit: number; expenses: number }>();
   const saleLines: SaleLine[] = [];
   let revenue = 0;
   let cogs = 0;
@@ -178,7 +178,7 @@ export async function buildPeriodReport(view: PeriodView, key: string): Promise<
       customer.qty += l.quantity;
       customerMap.set(m.partnerId, customer);
 
-      const point = seriesMap.get(seriesKey) ?? { revenue: 0, profit: 0 };
+      const point = seriesMap.get(seriesKey) ?? { revenue: 0, profit: 0, expenses: 0 };
       point.revenue += lineRevenue;
       point.profit += lineRevenue - lineCost;
       seriesMap.set(seriesKey, point);
@@ -191,6 +191,12 @@ export async function buildPeriodReport(view: PeriodView, key: string): Promise<
     if (!inPeriod(bkkDay(e.date), key)) continue;
     expenseTotal += e.amount;
     expenseMap.set(e.category, (expenseMap.get(e.category) ?? 0) + e.amount);
+    // ค่าใช้จ่ายรายวัน (ในมุมมองเดือน) หรือรายเดือน (ในมุมมองปี) ไว้คิดกำไรสุทธิของแต่ละช่วง
+    const expenseDay = bkkDay(e.date);
+    const expenseKey = view === "month" ? expenseDay : expenseDay.slice(0, 7);
+    const bucket = seriesMap.get(expenseKey) ?? { revenue: 0, profit: 0, expenses: 0 };
+    bucket.expenses += e.amount;
+    seriesMap.set(expenseKey, bucket);
   }
 
   // ออเดอร์: นับตามวันที่ส่งที่นัดไว้
@@ -215,17 +221,21 @@ export async function buildPeriodReport(view: PeriodView, key: string): Promise<
 
   // แกนกราฟให้ครบทุกวัน/ทุกเดือน แม้ช่วงนั้นไม่มียอด
   const series: PeriodReport["series"] = [];
+  const toPoint = (label: string, p?: { revenue: number; profit: number; expenses: number }) => {
+    const v = p ?? { revenue: 0, profit: 0, expenses: 0 };
+    return { label, ...v, net: v.profit - v.expenses };
+  };
   if (view === "month") {
     const [y, m] = key.split("-").map(Number);
     const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
     for (let d = 1; d <= days; d++) {
       const k = `${key}-${String(d).padStart(2, "0")}`;
-      series.push({ label: String(d), ...(seriesMap.get(k) ?? { revenue: 0, profit: 0 }) });
+      series.push(toPoint(String(d), seriesMap.get(k)));
     }
   } else if (view === "year") {
     for (let m = 1; m <= 12; m++) {
       const k = `${key}-${String(m).padStart(2, "0")}`;
-      series.push({ label: shortMonth(m), ...(seriesMap.get(k) ?? { revenue: 0, profit: 0 }) });
+      series.push(toPoint(shortMonth(m), seriesMap.get(k)));
     }
   }
 

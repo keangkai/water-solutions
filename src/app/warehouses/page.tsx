@@ -94,15 +94,23 @@ export default async function WarehousesPage() {
                   <span className="text-slate-400">ไม่มีสต็อกคงเหลือ</span>
                 )}
               </div>
-              {w.isActive && hasStock && (
+              {w.isActive && stock.positive > 0 && (
                 <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
-                  ถ้าจะปิดคลังนี้ ควรย้ายของออกก่อนที่หน้า “โอนย้ายคลัง”
+                  ปิดคลังนี้ไม่ได้จนกว่าจะย้ายของออกที่หน้า “โอนย้ายคลัง”
+                </div>
+              )}
+              {w.isActive && stock.positive === 0 && stock.negative > 0 && (
+                <div className="text-xs text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                  ปิดได้ แต่ยังมียอดติดลบ ควรแก้ด้วยใบรับเข้า/โอนย้ายก่อน
                 </div>
               )}
               <form action={setWarehouseActive.bind(null, w.id, !w.isActive)}>
-                <button className="min-h-[44px] w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 text-sm text-slate-700 hover:bg-slate-50 touch-manipulation active:scale-95">
+                <button
+                  disabled={w.isActive && stock.positive > 0}
+                  className="min-h-[44px] w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 text-sm text-slate-700 hover:bg-slate-50 touch-manipulation active:scale-95 disabled:opacity-50 disabled:hover:bg-transparent disabled:active:scale-100"
+                >
                   <Power className="size-4" />
-                  {w.isActive ? "ปิดใช้งานคลังนี้" : "เปิดใช้งานอีกครั้ง"}
+                  {w.isActive ? (stock.positive > 0 ? "ย้ายของออกก่อนจึงจะปิดได้" : "ปิดใช้งานคลังนี้") : "เปิดใช้งานอีกครั้ง"}
                 </button>
               </form>
             </div>

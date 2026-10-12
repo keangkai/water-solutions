@@ -91,6 +91,16 @@ export function ImportForm({ products, warehouses }: { products: Product[]; ware
             </label>
           </div>
 
+          <label className="flex items-start gap-2 text-sm text-slate-700 min-h-[44px]">
+            <input type="checkbox" name="includeWarned" value="1" className="size-5 mt-0.5 shrink-0" />
+            <span>
+              นำเข้าแถวที่มีคำเตือน “อาจซ้ำกับใบขายออกเดิม” ด้วย
+              <span className="block text-xs text-slate-500">
+                ปกติแถวเหล่านี้จะถูกข้ามไว้ก่อน เพื่อกันยอดขายและสต็อกถูกนับซ้ำ ตรวจใบขายออกเดิมแล้วค่อยเลือกติ๊กถ้าไม่ซ้ำจริง
+              </span>
+            </span>
+          </label>
+
           <label className="flex items-center gap-2 text-sm text-slate-700 min-h-[44px]">
             <input type="checkbox" name="setDefaults" value="1" defaultChecked className="size-5" />
             ตั้งราคาขาย/ต้นทุนข้างบนเป็นราคาตั้งต้นของสินค้าที่ยังไม่มีราคา (ไม่ทับราคาที่ตั้งไว้แล้ว)
@@ -170,8 +180,13 @@ export function ImportForm({ products, warehouses }: { products: Product[]; ware
                   ))}
                   <td className="py-2 px-3 whitespace-nowrap text-slate-600">{r.orderDate ?? "-"}</td>
                   <td className="py-2 px-3 whitespace-nowrap text-slate-600">{r.deliveryDate ?? "-"}</td>
-                  <td className={`py-2 px-3 ${r.skip ? "text-red-700" : "text-emerald-700"}`}>
-                    {r.skip ?? (preview.mode === "import" ? "นำเข้าแล้ว" : "พร้อมนำเข้า")}
+                  <td className={`py-2 px-3 ${r.warned ? "text-amber-700" : r.skip ? "text-red-700" : "text-emerald-700"}`}>
+                    {r.skip ??
+                      (r.warned
+                        ? `${preview.mode === "import" ? "นำเข้าแล้ว" : "พร้อมนำเข้า"} (ยืนยันแล้วว่าไม่ซ้ำ)`
+                        : preview.mode === "import"
+                          ? "นำเข้าแล้ว"
+                          : "พร้อมนำเข้า")}
                   </td>
                 </tr>
               ))}
