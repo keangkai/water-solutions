@@ -47,8 +47,9 @@ export async function GET(request: Request) {
   ];
 
   if (report.series.length > 0) {
-    rows.push([], [view === "month" ? "รายวัน" : "รายเดือน"], ["ช่วง", "ยอดขาย", "กำไรขั้นต้น"]);
-    for (const s of report.series) rows.push([s.label, s.revenue, Math.round(s.profit * 100) / 100]);
+    rows.push([], [view === "month" ? "รายวัน" : "รายเดือน"], ["ช่วง", "ยอดขาย", "กำไรขั้นต้น", "ค่าใช้จ่าย", "กำไรสุทธิ"]);
+    for (const s of report.series)
+      rows.push([s.label, s.revenue, Math.round(s.profit * 100) / 100, s.expenses, Math.round(s.net * 100) / 100]);
   }
 
   if (view === "day") {

@@ -18,16 +18,20 @@ function Card({ label, value, sub, tone = "text-slate-900" }: { label: string; v
 }
 
 function Bars({ series }: { series: PeriodReport["series"] }) {
-  const max = Math.max(1, ...series.map((s) => s.revenue));
+  const max = Math.max(1, ...series.map((s) => Math.max(s.revenue, Math.abs(s.profit), Math.abs(s.net))));
   return (
-    <div role="img" aria-label="กราฟยอดขายและกำไรขั้นต้น" className="flex items-end gap-0.5 sm:gap-1 h-40">
+    <div role="img" aria-label="กราฟยอดขาย กำไรขั้นต้น และกำไรสุทธิ" className="flex items-end gap-0.5 sm:gap-1 h-40">
       {series.map((s) => (
-        <div key={s.label} className="flex-1 min-w-0 flex flex-col items-center justify-end h-full" title={`${s.label}: ขาย ${money(s.revenue)} กำไรขั้นต้น ${money(s.profit)}`}>
+        <div key={s.label} className="flex-1 min-w-0 flex flex-col items-center justify-end h-full" title={`${s.label}: ขาย ${money(s.revenue)} กำไรขั้นต้น ${money(s.profit)} ค่าใช้จ่าย ${money(s.expenses)} กำไรสุทธิ ${money(s.net)}`}>
           <div className="w-full flex items-end gap-px h-full">
             <div className="flex-1 bg-sky-400 rounded-t" style={{ height: `${(s.revenue / max) * 100}%` }} />
             <div
               className={`flex-1 rounded-t ${s.profit >= 0 ? "bg-emerald-500" : "bg-red-400"}`}
               style={{ height: `${(Math.abs(s.profit) / max) * 100}%` }}
+            />
+            <div
+              className={`flex-1 rounded-t ${s.net >= 0 ? "bg-violet-500" : "bg-red-600"}`}
+              style={{ height: `${(Math.abs(s.net) / max) * 100}%` }}
             />
           </div>
           <div className="text-[10px] text-slate-500 mt-1 truncate max-w-full">{s.label}</div>
@@ -111,13 +115,22 @@ export function PeriodReportView({ report }: { report: PeriodReport }) {
         <Card label="ยอดขาย" value={money(report.revenue)} sub={`${report.qty.toLocaleString()} แพ็ค`} tone="text-sky-600" />
         <Card label="ต้นทุนสินค้าที่ขาย" value={money(report.cogs)} tone="text-amber-600" />
         <Card label="กำไรขั้นต้น" value={money(report.grossProfit)} sub="ยอดขาย − ต้นทุน" tone={profitTone(report.grossProfit)} />
-        <Card
-          label="กำไรสุทธิ"
-          value={money(report.netProfit)}
-          sub={`หักค่าใช้จ่าย ${money(report.expenses)}`}
-          tone={profitTone(report.netProfit)}
-        />
+        <Card label="ค่าใช้จ่าย" value={money(report.expenses)} sub="จากหน้าการเงิน" tone="text-slate-900" />
       </div>
+
+      <section
+        aria-label="กำไรสุทธิ"
+        className={`rounded-2xl border p-5 shadow-sm ${
+          report.netProfit >= 0 ? "bg-emerald-50 border-emerald-200" : "bg-red-50 border-red-200"
+        }`}
+      >
+        <div className="text-sm font-medium text-slate-600">กำไรสุทธิ</div>
+        <div className={`mt-1 text-4xl font-semibold ${profitTone(report.netProfit)}`}>{money(report.netProfit)} <span className="text-base font-normal text-slate-500">บาท</span></div>
+        <div className="mt-1.5 text-sm text-slate-600">
+          กำไรขั้นต้น {money(report.grossProfit)} − ค่าใช้จ่าย {money(report.expenses)}
+          {report.revenue > 0 && <> · คิดเป็น {((report.netProfit / report.revenue) * 100).toFixed(1)}% ของยอดขาย</>}
+        </div>
+      </section>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card label="ออเดอร์ทั้งหมด" value={String(report.orderCounts.total)} sub={`ส่งแล้ว ${report.orderCounts.delivered}`} />
@@ -147,9 +160,46 @@ export function PeriodReportView({ report }: { report: PeriodReport }) {
             <div className="flex items-center gap-3 text-xs text-slate-500">
               <span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-sm bg-sky-400" /> ยอดขาย</span>
               <span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-sm bg-emerald-500" /> กำไรขั้นต้น</span>
+              <span className="inline-flex items-center gap-1"><span className="size-2.5 rounded-sm bg-violet-500" /> กำไรสุทธิ</span>
             </div>
           </div>
           <Bars series={report.series} />
+
+          <div className="overflow-x-auto -mx-1">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-slate-500 border-b border-slate-200">
+                  <th className="py-2 px-2 font-medium">{view === "month" ? "วันที่" : "เดือน"}</th>
+                  <th className="py-2 px-2 font-medium text-right">ยอดขาย</th>
+                  <th className="py-2 px-2 font-medium text-right">กำไรขั้นต้น</th>
+                  <th className="py-2 px-2 font-medium text-right">ค่าใช้จ่าย</th>
+                  <th className="py-2 px-2 font-medium text-right">กำไรสุทธิ</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.series
+                  .filter((s) => s.revenue !== 0 || s.expenses !== 0)
+                  .map((s) => (
+                    <tr key={s.label} className="border-b border-slate-100">
+                      <td className="py-2 px-2 text-slate-700 whitespace-nowrap">
+                        {view === "month" ? `${s.label}/${key.slice(5, 7)}` : s.label}
+                      </td>
+                      <td className="py-2 px-2 text-right text-slate-600">{money(s.revenue)}</td>
+                      <td className={`py-2 px-2 text-right ${profitTone(s.profit)}`}>{money(s.profit)}</td>
+                      <td className="py-2 px-2 text-right text-slate-600">{money(s.expenses)}</td>
+                      <td className={`py-2 px-2 text-right font-medium ${profitTone(s.net)}`}>{money(s.net)}</td>
+                    </tr>
+                  ))}
+                <tr className="font-medium text-slate-900">
+                  <td className="py-2 px-2">รวม</td>
+                  <td className="py-2 px-2 text-right">{money(report.revenue)}</td>
+                  <td className={`py-2 px-2 text-right ${profitTone(report.grossProfit)}`}>{money(report.grossProfit)}</td>
+                  <td className="py-2 px-2 text-right">{money(report.expenses)}</td>
+                  <td className={`py-2 px-2 text-right ${profitTone(report.netProfit)}`}>{money(report.netProfit)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
 
