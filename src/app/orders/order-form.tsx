@@ -6,12 +6,14 @@ import { Plus, X } from "lucide-react";
 import { createOrder, updateOrder } from "./actions";
 import { DELIVERY_ROUNDS } from "@/lib/delivery";
 import { DateInput } from "@/components/date-input";
+import { facebookNameIfDifferent } from "@/lib/customer-labels";
 
 export type OrderProduct = { id: string; name: string; unit: string; defaultSellPrice: number | null };
 export type OrderCustomer = {
   id: string;
   name: string;
   companyName: string | null;
+  facebookName: string | null;
   phone: string | null;
   address: string | null;
 };
@@ -97,7 +99,7 @@ export function OrderForm({
           >
             {customers.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.companyName ? `${c.name} (${c.companyName})` : c.name}
+                {[c.companyName ? `${c.name} (${c.companyName})` : c.name, facebookNameIfDifferent(c.name, c.facebookName) && `FB: ${facebookNameIfDifferent(c.name, c.facebookName)}`].filter(Boolean).join(" · ")}
               </option>
             ))}
           </select>

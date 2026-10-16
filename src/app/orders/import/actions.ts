@@ -51,11 +51,13 @@ export async function importOrders(_: unknown, formData: FormData): Promise<Impo
   for (const h of usedHeaders) if (!productBySize.has(h)) return { error: `เลือกสินค้าให้ขนาด ${h}` };
 
   const customers = await prisma.partner.findMany({ where: { type: "CUSTOMER" } });
-  const findCustomer = (name: string, phone: string) => {
+  const findCustomer = (name: string, phone: string, facebookName = "") => {
     const digits = digitsOnly(phone);
     return (
       (digits.length >= 9 ? customers.find((c) => c.phone && digitsOnly(c.phone) === digits) : undefined) ??
-      customers.find((c) => c.name.trim().toLowerCase() === name.toLowerCase())
+      customers.find((c) => c.name.trim().toLowerCase() === name.toLowerCase()) ??
+      // ชื่อในไฟล์อาจเป็นชื่อ Facebook ของลูกค้าที่มีอยู่แล้ว
+      customers.find((c) => c.facebookName && [name, facebookName].some((n) => n && c.facebookName!.trim().toLowerCase() === n.toLowerCase()))
     );
   };
 
@@ -150,7 +152,7 @@ export async function importOrders(_: unknown, formData: FormData): Promise<Impo
       continue;
     }
 
-    let customer = findCustomer(row.name, row.phone);
+    let customer = findCustomer(row.name, row.phone, row.facebookName);
     const isNew = !customer;
     const key = (partnerId: string) => orderKey(partnerId, row.deliveryDate!, orderDate!, qty);
 
@@ -174,6 +176,7 @@ export async function importOrders(_: unknown, formData: FormData): Promise<Impo
         customer = await prisma.partner.create({
           data: {
             name: row.name,
+            facebookName: row.facebookName || null,
             type: "CUSTOMER",
             phone: row.phone || null,
             address: row.address || null,

@@ -7,6 +7,7 @@ import { formatDate } from "@/lib/format-date";
 import { DELIVERY_ROUNDS, roundLabel, shiftDateKey, todayInBangkok } from "@/lib/delivery";
 import { DriverOrderCard, type DriverOrder } from "./driver-order-card";
 import { Truck, ChevronLeft, ChevronRight, LogOut, Package, ClipboardList } from "lucide-react";
+import { facebookNameIfDifferent } from "@/lib/customer-labels";
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -64,6 +65,7 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
     status: o.status,
     name: o.partner.name,
     companyName: o.partner.companyName,
+    facebookName: facebookNameIfDifferent(o.partner.name, o.partner.facebookName),
     phone: o.partner.phone,
     address: o.deliveryAddress ?? o.partner.address,
     coords:

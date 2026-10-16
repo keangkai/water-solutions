@@ -61,6 +61,7 @@ export function sizeToMl(raw: string | null | undefined): number | null {
 export type SheetRow = {
   rowNo: number; // เลขแถวใน Excel (ไม่นับหัวตาราง)
   name: string;
+  facebookName: string; // คอลัมน์ "ชื่อ Facebook" (ถ้ามี)
   phone: string;
   sizes: Record<string, number>; // หัวคอลัมน์ขนาด → จำนวนแพ็ค
   orderDate: string | null;
@@ -80,7 +81,9 @@ export function parseOrderSheet(text: string): ParsedSheet {
   const header = table[0].map((h) => h.trim());
   const find = (label: string) => header.findIndex((h) => h.includes(label));
   const idx = {
-    name: find("ชื่อ"),
+    // "ชื่อ" = ชื่อจริง ต้องไม่ใช่คอลัมน์ชื่อ Facebook
+    name: header.findIndex((h) => h.includes("ชื่อ") && !/facebook|เฟส/i.test(h)),
+    facebookName: header.findIndex((h) => /facebook|เฟส/i.test(h) && h.includes("ชื่อ")),
     phone: find("เบอร์"),
     total: find("รวม"),
     orderDate: find("วันที่สั่ง"),
@@ -125,6 +128,7 @@ export function parseOrderSheet(text: string): ParsedSheet {
     return {
       rowNo: n + 1,
       name,
+      facebookName: cell(r, idx.facebookName),
       phone: cell(r, idx.phone),
       sizes,
       orderDate,

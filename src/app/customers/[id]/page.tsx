@@ -7,6 +7,7 @@ import { segmentLabel, deliveryLabel } from "@/lib/customer-labels";
 import { behaviorInfo, classifyBehavior } from "@/lib/customer-behavior";
 import { ArrowLeft, Phone, MapPin, Warehouse as WarehouseIcon } from "lucide-react";
 import { LinkifiedText } from "@/components/linkified-text";
+import { facebookNameIfDifferent } from "@/lib/customer-labels";
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -60,6 +61,9 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           <span className={`text-xs px-2 py-0.5 rounded-full border ${info.badge}`}>{info.label}</span>
         </div>
         {customer.companyName && <div className="text-sm text-slate-500">{customer.companyName}</div>}
+        {facebookNameIfDifferent(customer.name, customer.facebookName) && (
+          <div className="text-sm text-slate-400">Facebook: {facebookNameIfDifferent(customer.name, customer.facebookName)}</div>
+        )}
         {tags.length > 0 && <div className="text-xs text-slate-400 mt-1">{tags.join(" · ")}</div>}
         <div className="mt-3 space-y-1 text-sm text-slate-500">
           {customer.phone && (

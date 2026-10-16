@@ -7,6 +7,7 @@ import { OrderForm, type OrderCustomer, type OrderProduct, type OrderWarehouse }
 import { formatDate } from "@/lib/format-date";
 import { LinkifiedText } from "@/components/linkified-text";
 import { orderStatusInfo, roundLabel, type OrderStatus } from "@/lib/delivery";
+import { facebookNameIfDifferent } from "@/lib/customer-labels";
 
 export type OrderCardData = {
   id: string;
@@ -21,7 +22,7 @@ export type OrderCardData = {
   issueReason: string | null;
   deliveredAt: Date | null;
   paidAt: Date | null;
-  partner: { name: string; companyName: string | null; phone: string | null; address: string | null };
+  partner: { name: string; companyName: string | null; facebookName: string | null; phone: string | null; address: string | null };
   warehouse: { name: string };
   lines: {
     id: string;
@@ -84,6 +85,9 @@ export function OrderCard({
           </div>
           <div className="mt-1.5 font-medium text-slate-900">{order.partner.name}</div>
           {order.partner.companyName && <div className="text-xs text-slate-500">{order.partner.companyName}</div>}
+          {facebookNameIfDifferent(order.partner.name, order.partner.facebookName) && (
+            <div className="text-xs text-slate-400">Facebook: {facebookNameIfDifferent(order.partner.name, order.partner.facebookName)}</div>
+          )}
         </div>
         {isOpen && (
           <button

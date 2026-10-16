@@ -15,3 +15,9 @@ export const deliveryLabel = { DELIVERY: "ไปส่งเอง", PICKUP: "�
 export type CustomerSegment = keyof typeof segmentLabel;
 export type ChannelType = keyof typeof channelLabel;
 export type DeliveryMethod = keyof typeof deliveryLabel;
+
+// ชื่อ Facebook แสดงเมื่อไม่ซ้ำกับชื่อหลัก (ถ้าเหมือนกันไม่ต้องแสดงซ้ำ)
+export function facebookNameIfDifferent(name: string, facebookName: string | null | undefined) {
+  const fb = facebookName?.trim();
+  return fb && fb.toLowerCase() !== name.trim().toLowerCase() ? fb : null;
+}
