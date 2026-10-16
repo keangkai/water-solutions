@@ -6,6 +6,7 @@ import { updatePartner, deletePartner } from "./actions";
 import { PartnerFields, type PartnerValues, type SourceOption } from "./partner-fields";
 import { segmentLabel } from "@/lib/customer-labels";
 import { LinkifiedText } from "@/components/linkified-text";
+import { facebookNameIfDifferent } from "@/lib/customer-labels";
 
 type Partner = PartnerValues & { id: string; source: { name: string } | null };
 
@@ -33,6 +34,9 @@ export function PartnerCard({
           <div>
             <div className="font-medium text-slate-900">{partner.name}</div>
             {partner.companyName && <div className="text-xs text-slate-500">{partner.companyName}</div>}
+            {facebookNameIfDifferent(partner.name, partner.facebookName) && (
+              <div className="text-xs text-slate-400">Facebook: {facebookNameIfDifferent(partner.name, partner.facebookName)}</div>
+            )}
             <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full border ${typeBadge[partner.type]}`}>
               {typeLabel[partner.type]}
             </span>

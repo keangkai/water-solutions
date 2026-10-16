@@ -6,6 +6,7 @@ import { segmentLabel, type CustomerSegment } from "@/lib/customer-labels";
 import { behaviorInfo, classifyBehavior } from "@/lib/customer-behavior";
 import { Contact, Search, Phone, MapPin } from "lucide-react";
 import { LinkifiedText } from "@/components/linkified-text";
+import { facebookNameIfDifferent } from "@/lib/customer-labels";
 
 // รายชื่อลูกค้าพร้อมข้อมูลติดต่อและสรุปการซื้อ ค้นหาจากชื่อ เบอร์ ที่อยู่ หรือโซน
 async function loadCustomerList() {
@@ -27,6 +28,7 @@ async function loadCustomerList() {
         id: p.id,
         name: p.name,
         companyName: p.companyName,
+        facebookName: p.facebookName,
         type: p.type,
         phone: p.phone,
         address: p.address,
@@ -57,7 +59,7 @@ export default async function CustomerListPage({
   const customers = all.filter((c) => {
     if (segment === "NONE" ? c.segment !== null : segment && c.segment !== segment) return false;
     if (!needle) return true;
-    return [c.name, c.companyName, c.phone, c.address, c.zone].some((v) => v?.toLowerCase().includes(needle));
+    return [c.name, c.companyName, c.facebookName, c.phone, c.address, c.zone].some((v) => v?.toLowerCase().includes(needle));
   });
 
   const segmentHref = (value: string) => {
@@ -150,6 +152,9 @@ export default async function CustomerListPage({
                     {c.name}
                   </Link>
                   {c.companyName && <div className="text-xs text-slate-500">{c.companyName}</div>}
+                  {facebookNameIfDifferent(c.name, c.facebookName) && (
+                    <div className="text-xs text-slate-400">Facebook: {facebookNameIfDifferent(c.name, c.facebookName)}</div>
+                  )}
                   <div className="flex flex-wrap items-center gap-1.5 mt-1">
                     <span className={`text-xs px-2 py-0.5 rounded-full border ${info.badge}`}>{info.label}</span>
                     {c.type === "SUPPLIER" && (

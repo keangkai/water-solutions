@@ -7,6 +7,7 @@ import { MovementForm } from "./movement-form";
 import { formatDate } from "@/lib/format-date";
 import { deliveryLabel, type DeliveryMethod } from "@/lib/customer-labels";
 import type { PartnerOptions } from "@/lib/movement-partners";
+import { facebookNameIfDifferent } from "@/lib/customer-labels";
 
 const typeLabel = { IN: "รับเข้า", OUT: "ขายออก" } as const;
 
@@ -22,7 +23,7 @@ type Movement = {
   date: Date;
   createdAt: Date;
   updatedAt: Date;
-  partner: { name: string };
+  partner: { name: string; facebookName: string | null };
   warehouse: { name: string };
   lines: { id: string; productId: string; quantity: number; unitPrice: number; product: { name: string; unit: string } }[];
 };
@@ -76,6 +77,9 @@ export function MovementCard({
             <span className="text-xs text-slate-400">{formatDate(movement.date)}</span>
           </div>
           <div className="mt-1.5 font-medium text-slate-900">{movement.partner.name}</div>
+          {facebookNameIfDifferent(movement.partner.name, movement.partner.facebookName) && (
+            <div className="text-xs text-slate-400">Facebook: {facebookNameIfDifferent(movement.partner.name, movement.partner.facebookName)}</div>
+          )}
           <div className="flex items-center gap-1 text-xs text-slate-500 mt-0.5">
             <WarehouseIcon className="size-3" /> {movement.warehouse.name}
             {movement.deliveryMethod && <span>· {deliveryLabel[movement.deliveryMethod]}</span>}

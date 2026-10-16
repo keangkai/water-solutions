@@ -22,6 +22,7 @@ async function parsePartner(formData: FormData) {
   const segment = isCustomer && segmentRaw in segmentLabel ? (segmentRaw as CustomerSegment) : null;
   const zone = isCustomer ? String(formData.get("zone") ?? "").trim() || null : null;
   const sourceId = isCustomer ? String(formData.get("sourceId") ?? "") || null : null;
+  const facebookName = isCustomer ? String(formData.get("facebookName") ?? "").trim() || null : null;
   const mapUrl = isCustomer ? String(formData.get("mapUrl") ?? "").trim() || null : null;
   const coords = mapUrl ? await coordsFromMapLink(mapUrl) : null;
 
@@ -29,6 +30,7 @@ async function parsePartner(formData: FormData) {
     name,
     type,
     companyName,
+    facebookName,
     phone,
     address,
     segment,

@@ -55,7 +55,7 @@ export default async function OrdersPage({
     (!filterDate || bkkDay(o.deliveryDate) === filterDate) &&
     (!filterRound || o.deliveryRound === filterRound) &&
     (!needle ||
-      [o.partner.name, o.partner.companyName, o.partner.phone].some((v) => v?.toLowerCase().includes(needle)));
+      [o.partner.name, o.partner.companyName, o.partner.facebookName, o.partner.phone].some((v) => v?.toLowerCase().includes(needle)));
   orders = orders.filter(matches);
 
   const byTab: Record<TabKey, typeof orders> = {

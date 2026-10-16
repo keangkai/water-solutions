@@ -7,6 +7,7 @@ export type PartnerValues = {
   name: string;
   type: "SUPPLIER" | "CUSTOMER";
   companyName: string | null;
+  facebookName: string | null;
   phone: string | null;
   address: string | null;
   segment: CustomerSegment | null;
@@ -63,6 +64,10 @@ export function PartnerFields({
       </div>
       {type === "CUSTOMER" && (
         <>
+          <div className="flex flex-col gap-1 flex-1 min-w-[140px]">
+            <label className="text-xs font-medium text-slate-500">ชื่อ Facebook (ถ้ามี)</label>
+            <input name="facebookName" defaultValue={partner?.facebookName ?? ""} className={inputClass} />
+          </div>
           <div className="flex flex-col gap-1 w-full sm:w-auto">
             <label className="text-xs font-medium text-slate-500">ประเภทลูกค้า</label>
             <select name="segment" defaultValue={partner?.segment ?? ""} className={inputClass}>
