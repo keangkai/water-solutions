@@ -3,7 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { createPartner } from "./actions";
 import { PartnerCard } from "./partner-card";
 import { PartnerFields } from "./partner-fields";
-import { Users, Plus } from "lucide-react";
+import Link from "next/link";
+import { Users, Plus, UserPlus } from "lucide-react";
 
 export default async function PartnersPage() {
   const [partners, sources] = await Promise.all([
@@ -18,6 +19,12 @@ export default async function PartnersPage() {
       <div className="flex items-center gap-2">
         <Users className="size-5 text-sky-500" />
         <h1 className="text-xl font-semibold text-slate-900">คู่ค้า</h1>
+        <Link
+          href="/customers/new?return=%2Fpartners"
+          className="ml-auto min-h-[44px] px-4 inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 text-sky-700 text-sm font-medium touch-manipulation active:scale-95"
+        >
+          <UserPlus className="size-4" /> เพิ่มลูกค้า
+        </Link>
       </div>
 
       <form

@@ -6,6 +6,7 @@ import { segmentLabel, type CustomerSegment } from "@/lib/customer-labels";
 import { behaviorInfo, classifyBehavior } from "@/lib/customer-behavior";
 import { Contact, Search, Phone, MapPin } from "lucide-react";
 import { LinkifiedText } from "@/components/linkified-text";
+import { AddedBanner } from "@/components/added-banner";
 import { facebookNameIfDifferent } from "@/lib/customer-labels";
 
 // รายชื่อลูกค้าพร้อมข้อมูลติดต่อและสรุปการซื้อ ค้นหาจากชื่อ เบอร์ ที่อยู่ หรือโซน
@@ -47,7 +48,7 @@ async function loadCustomerList() {
 export default async function CustomerListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; segment?: string }>;
+  searchParams: Promise<{ q?: string; segment?: string; customer?: string; added?: string }>;
 }) {
   const params = await searchParams;
   const q = (params.q ?? "").trim();
@@ -55,6 +56,7 @@ export default async function CustomerListPage({
     params.segment && (params.segment in segmentLabel || params.segment === "NONE") ? params.segment : "";
 
   const all = await loadCustomerList();
+  const justAdded = params.added === "1" ? all.find((c) => c.id === params.customer) : undefined;
   const needle = q.toLowerCase();
   const customers = all.filter((c) => {
     if (segment === "NONE" ? c.segment !== null : segment && c.segment !== segment) return false;
@@ -77,12 +79,13 @@ export default async function CustomerListPage({
 
   return (
     <div className="space-y-6">
+      {justAdded && <AddedBanner name={justAdded.name} />}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Contact className="size-5 text-sky-500" />
           <h1 className="text-xl font-semibold text-slate-900">รายชื่อลูกค้า</h1>
         </div>
-        <Link href="/partners" className="text-sm text-sky-600 hover:text-sky-700 font-medium min-h-[44px] inline-flex items-center touch-manipulation">
+        <Link href="/customers/new?return=%2Fcustomers%2Flist" className="text-sm text-sky-600 hover:text-sky-700 font-medium min-h-[44px] inline-flex items-center touch-manipulation">
           + เพิ่มลูกค้า
         </Link>
       </div>

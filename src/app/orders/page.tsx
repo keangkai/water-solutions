@@ -6,6 +6,7 @@ import { OrderCard } from "./order-card";
 import { DELIVERY_ROUNDS, earliestDeliveryDate, isDeliveryRound, todayInBangkok } from "@/lib/delivery";
 import { bkkDay } from "@/lib/report-period";
 import { warehouseOptionsFor } from "@/lib/warehouses";
+import { AddedBanner } from "@/components/added-banner";
 import { ClipboardCheck } from "lucide-react";
 
 const tabs = {
@@ -21,7 +22,7 @@ const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string; date?: string; round?: string; q?: string }>;
+  searchParams: Promise<{ tab?: string; date?: string; round?: string; q?: string; customer?: string; added?: string }>;
 }) {
   const params = await searchParams;
   const filterDate = params.date && datePattern.test(params.date) ? params.date : "";
@@ -68,6 +69,8 @@ export default async function OrdersPage({
   const visible = byTab[tab];
   const failedCount = allFetched.filter((o) => o.status === "FAILED").length;
 
+  // เพิ่งเพิ่มลูกค้ามาจากหน้าเพิ่มลูกค้า: เลือกลูกค้าคนนั้นไว้ให้ในฟอร์ม
+  const justAdded = customers.find((c) => c.id === params.customer);
   const canRecord = customers.length > 0 && products.length > 0 && warehouses.some((w) => w.isActive);
 
   return (
@@ -80,6 +83,8 @@ export default async function OrdersPage({
         </Link>
       </div>
 
+      {justAdded && params.added === "1" && <AddedBanner name={justAdded.name} hint="เลือกไว้ให้ในฟอร์มออเดอร์แล้ว" />}
+
       {canRecord ? (
         <OrderForm
           customers={customers}
@@ -87,6 +92,7 @@ export default async function OrdersPage({
           warehouses={warehouseOptionsFor(warehouses)}
           today={today}
           minDeliveryDate={earliestDeliveryDate(today)}
+          defaultCustomerId={justAdded?.id}
         />
       ) : (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-4">
