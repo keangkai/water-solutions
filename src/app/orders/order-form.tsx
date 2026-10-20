@@ -44,6 +44,7 @@ export function OrderForm({
   warehouses,
   today,
   minDeliveryDate,
+  defaultCustomerId,
   initialOrder,
   onDone,
 }: {
@@ -52,12 +53,13 @@ export function OrderForm({
   warehouses: OrderWarehouse[];
   today: string;
   minDeliveryDate?: string; // วันส่งที่เก่าสุดสำหรับออเดอร์ใหม่ กำหนดโดย server
+  defaultCustomerId?: string; // เลือกลูกค้าไว้ให้ (เช่น เพิ่งเพิ่มลูกค้าใหม่มา)
   initialOrder?: InitialOrder;
   onDone?: () => void;
 }) {
   const isEdit = !!initialOrder;
   const emptyRow = (): LineRow => ({ productId: products[0]?.id ?? "", quantity: "", unitPrice: defaultPrice(products[0]) });
-  const [partnerId, setPartnerId] = useState(initialOrder?.partnerId ?? customers[0]?.id ?? "");
+  const [partnerId, setPartnerId] = useState(initialOrder?.partnerId ?? defaultCustomerId ?? customers[0]?.id ?? "");
   const [rows, setRows] = useState<LineRow[]>(
     initialOrder
       ? initialOrder.lines.map((l) => ({ productId: l.productId, quantity: String(l.quantity), unitPrice: String(l.unitPrice) }))
@@ -86,7 +88,7 @@ export function OrderForm({
         <div className="flex flex-col gap-1 w-full sm:w-auto sm:min-w-[200px]">
           <div className="flex items-baseline justify-between gap-3">
             <label className="text-xs font-medium text-slate-500">ลูกค้า</label>
-            <Link href="/partners" className="text-xs text-sky-600 hover:text-sky-700 min-h-[44px] inline-flex items-center touch-manipulation">
+            <Link href="/customers/new?return=%2Forders" className="text-xs text-sky-600 hover:text-sky-700 min-h-[44px] inline-flex items-center touch-manipulation">
               + ลูกค้าใหม่
             </Link>
           </div>

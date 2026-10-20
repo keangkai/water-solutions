@@ -6,15 +6,17 @@ import { MovementCard } from "./movement-card";
 import { partnerOptionsFor } from "@/lib/movement-partners";
 import { todayInBangkok } from "@/lib/delivery";
 import { warehouseOptionsFor } from "@/lib/warehouses";
+import { AddedBanner } from "@/components/added-banner";
 import { ArrowLeftRight, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 
 export default async function MovementsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; customer?: string; added?: string }>;
 }) {
   const today = todayInBangkok();
-  const tab = (await searchParams).tab === "out" ? "OUT" : "IN";
+  const params = await searchParams;
+  const tab = params.tab === "out" ? "OUT" : "IN";
 
   const [products, partners, warehouses, movements] = await Promise.all([
     prisma.product.findMany({ orderBy: { name: "asc" } }),
@@ -26,6 +28,8 @@ export default async function MovementsPage({
     }),
   ]);
 
+  // เพิ่งเพิ่มลูกค้ามาจากหน้าเพิ่มลูกค้า (ใช้ได้กับใบขายออกเท่านั้น)
+  const justAdded = tab === "OUT" ? partners.find((p) => p.id === params.customer && p.type === "CUSTOMER") : undefined;
   const canRecord = products.length > 0 && partners.length > 0 && warehouses.some((w) => w.isActive);
 
   let totalInQty = 0;
@@ -101,6 +105,8 @@ export default async function MovementsPage({
         </Link>
       </div>
 
+      {justAdded && params.added === "1" && tab === "OUT" && <AddedBanner name={justAdded.name} hint="เลือกไว้ให้ในฟอร์มขายออกแล้ว" />}
+
       {!canRecord ? (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-4">
           ต้องเพิ่มสินค้า, คู่ค้า และคลัง ก่อนจึงจะบันทึกรายการได้
@@ -112,6 +118,7 @@ export default async function MovementsPage({
           partnerOptions={partnerOptionsFor(partners)}
           warehouses={warehouseOptionsFor(warehouses)}
           today={today}
+          defaultPartnerId={justAdded?.id}
           defaultType={tab}
         />
       )}

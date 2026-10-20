@@ -39,6 +39,7 @@ export function MovementForm({
   partnerOptions: allPartnerOptions,
   warehouses,
   today,
+  defaultPartnerId,
   initialMovement,
   defaultType = "IN",
   onDone,
@@ -47,6 +48,7 @@ export function MovementForm({
   partnerOptions: PartnerOptions;
   warehouses: Warehouse[];
   today: string; // วันที่ตามเวลาไทย กำหนดโดย server
+  defaultPartnerId?: string; // เลือกคู่ค้าไว้ให้ (เช่น เพิ่งเพิ่มลูกค้าใหม่มา)
   initialMovement?: InitialMovement;
   defaultType?: "IN" | "OUT";
   onDone?: () => void;
@@ -158,7 +160,9 @@ export function MovementForm({
         <div className="flex flex-col gap-1 w-full sm:w-auto">
           <div className="flex items-baseline justify-between gap-3">
             <label className="text-xs font-medium text-slate-500">{type === "OUT" ? "ลูกค้า" : "ซัพพลายเออร์"}</label>
-            <Link href="/partners" className="text-xs text-sky-600 hover:text-sky-700 min-h-[44px] inline-flex items-center touch-manipulation">
+            <Link
+              href={type === "OUT" ? "/customers/new?return=%2Fmovements%3Ftab%3Dout" : "/partners"}
+              className="text-xs text-sky-600 hover:text-sky-700 min-h-[44px] inline-flex items-center touch-manipulation">
               {partnerOptions.length === 0
                 ? type === "OUT"
                   ? "ยังไม่มีลูกค้า เพิ่มลูกค้าก่อน"
@@ -172,7 +176,7 @@ export function MovementForm({
             key={type}
             name="partnerId"
             required
-            defaultValue={initialMovement?.partnerId}
+            defaultValue={initialMovement?.partnerId ?? defaultPartnerId}
             className="border border-slate-300 rounded-lg px-3 py-2 text-sm text-black focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400"
           >
             {partnerOptions.map((p) => (

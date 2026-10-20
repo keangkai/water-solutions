@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { isAdmin } from "@/lib/auth";
 import { PartnerType, CustomerSegment } from "@/generated/prisma/client";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { segmentLabel } from "@/lib/customer-labels";
 import { coordsFromMapLink } from "@/lib/maps-link";
 
@@ -75,4 +76,36 @@ export async function deletePartner(id: string) {
   if (!(await isAdmin())) return;
   await prisma.partner.delete({ where: { id } });
   revalidatePartnerPaths();
+}
+
+export type CreateCustomerState = { error: string } | { duplicate: { name: string; phone: string | null } } | null;
+
+// กลับไปหน้าเดิมที่กดมา ยอมเฉพาะ path ภายในเว็บ กัน open redirect
+function safeReturnPath(raw: string) {
+  return raw.startsWith("/") && !raw.startsWith("//") && !raw.includes("\\") && raw.length <= 200 ? raw : "/customers/list";
+}
+
+// เพิ่มลูกค้าจากหน้า /customers/new (ฟอร์มสำหรับมือถือ) ประเภทเป็นลูกค้าเสมอ
+// เบอร์โทรซ้ำกับลูกค้าเดิม จะเตือนก่อน ยืนยัน (allowDuplicate) ถึงจะบันทึกซ้ำ
+export async function createCustomer(_: CreateCustomerState, formData: FormData): Promise<CreateCustomerState> {
+  if (!(await isAdmin())) return { error: "กรุณาเข้าสู่ระบบใหม่" };
+  formData.set("type", "CUSTOMER");
+  const data = await parsePartner(formData);
+  if (!data) return { error: "กรอกชื่อลูกค้า" };
+
+  if (formData.get("allowDuplicate") !== "1" && data.phone) {
+    const digits = data.phone.replace(/\D/g, "");
+    if (digits.length >= 9) {
+      const customers = await prisma.partner.findMany({ where: { type: "CUSTOMER", phone: { not: null } }, select: { name: true, phone: true } });
+      const same = customers.find((c) => c.phone && c.phone.replace(/\D/g, "") === digits);
+      if (same) return { duplicate: { name: same.name, phone: same.phone } };
+    }
+  }
+
+  const created = await prisma.partner.create({ data });
+  revalidatePartnerPaths();
+
+  const back = safeReturnPath(String(formData.get("return") ?? ""));
+  const joiner = back.includes("?") ? "&" : "?";
+  redirect(`${back}${joiner}customer=${created.id}&added=1`);
 }
