@@ -14,6 +14,9 @@ export type OrderCustomer = {
   name: string;
   companyName: string | null;
   facebookName: string | null;
+  isBlacklisted: boolean;
+  blacklistReason: string | null;
+  recentIncidents: number; // ยกเลิก/ติดต่อไม่ได้ ในช่วงล่าสุด
   phone: string | null;
   address: string | null;
 };
@@ -101,7 +104,8 @@ export function OrderForm({
           >
             {customers.map((c) => (
               <option key={c.id} value={c.id}>
-                {[c.companyName ? `${c.name} (${c.companyName})` : c.name, facebookNameIfDifferent(c.name, c.facebookName) && `FB: ${facebookNameIfDifferent(c.name, c.facebookName)}`].filter(Boolean).join(" · ")}
+                {(c.isBlacklisted ? "⛔ " : "") +
+                  [c.companyName ? `${c.name} (${c.companyName})` : c.name, facebookNameIfDifferent(c.name, c.facebookName) && `FB: ${facebookNameIfDifferent(c.name, c.facebookName)}`].filter(Boolean).join(" · ")}
               </option>
             ))}
           </select>
@@ -144,6 +148,24 @@ export function OrderForm({
           </select>
         </div>
       </div>
+
+      {customer?.isBlacklisted && !isEdit && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-3 space-y-2">
+          <div className="text-sm text-red-800">
+            <b>⛔ ลูกค้ารายนี้อยู่ในบัญชีดำ</b>
+            {customer.blacklistReason && <> · {customer.blacklistReason}</>}
+          </div>
+          <label className="flex items-start gap-2 text-sm text-red-900 min-h-[44px]">
+            <input type="checkbox" name="confirmBlacklisted" value="1" required className="size-5 mt-0.5 shrink-0" />
+            ยืนยันว่าจะรับออเดอร์จากลูกค้ารายนี้ (ควรโทรยืนยันก่อนส่ง)
+          </label>
+        </div>
+      )}
+      {customer && !customer.isBlacklisted && customer.recentIncidents >= 2 && !isEdit && (
+        <div className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+          ⚠️ ลูกค้ารายนี้ยกเลิก/ติดต่อไม่ได้ {customer.recentIncidents} ครั้งใน 90 วันที่ผ่านมา ควรโทรยืนยันก่อนส่ง
+        </div>
+      )}
 
       {customer && (
         <div className="text-xs text-slate-500">

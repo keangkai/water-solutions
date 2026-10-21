@@ -43,6 +43,12 @@ enum OrderStatus {
   CANCELLED
 }
 
+// เหตุการณ์ที่ลูกค้าเป็นต้นเหตุให้ส่งไม่สำเร็จ ใช้ประกอบการขึ้นบัญชีดำ
+enum IncidentKind {
+  CANCELLED // ลูกค้ายกเลิกออเดอร์
+  NO_ANSWER // ไม่รับสาย / ติดต่อไม่ได้ / ไม่อยู่ตอนส่ง
+}
+
 enum DeliveryMethod {
   DELIVERY // ร้านไปส่งเอง
   PICKUP // ลูกค้ามารับที่คลัง
@@ -73,23 +79,27 @@ model Product {
 }
 
 model Partner {
-  id           String           @id @default(cuid())
-  name         String
-  type         PartnerType
-  companyName  String? // ชื่อบริษัท ไม่บังคับ
-  facebookName String? // ชื่อ Facebook ของลูกค้า ใช้ดูคู่กับชื่อจริงเพราะบางคนไม่ตรงกัน ไม่บังคับ
-  phone        String?
-  address      String?
-  mapUrl       String? // ลิงก์ Google Maps ที่ลูกค้าส่งมา
-  latitude     Float? // พิกัดที่ดึงจากลิงก์ ใช้วิเคราะห์โซนและนำทาง
-  longitude    Float?
-  segment      CustomerSegment? // ประเภทลูกค้า ใช้กับ CUSTOMER เท่านั้น
-  zone         String? // โซน/ตำบล แยกจากที่อยู่เพื่อใช้จัดกลุ่มในรายงาน
-  source       CustomerSource?  @relation(fields: [sourceId], references: [id])
-  sourceId     String? // รู้จักร้านจากช่องทางไหน ว่าง = ไม่ทราบ
-  movements    Movement[]
-  orders       Order[]
-  createdAt    DateTime         @default(now())
+  id              String             @id @default(cuid())
+  name            String
+  type            PartnerType
+  companyName     String? // ชื่อบริษัท ไม่บังคับ
+  isBlacklisted   Boolean            @default(false) // บัญชีดำ: ลูกค้ายกเลิกหรือติดต่อไม่ได้บ่อย
+  blacklistReason String?
+  blacklistedAt   DateTime?
+  incidents       CustomerIncident[]
+  facebookName    String? // ชื่อ Facebook ของลูกค้า ใช้ดูคู่กับชื่อจริงเพราะบางคนไม่ตรงกัน ไม่บังคับ
+  phone           String?
+  address         String?
+  mapUrl          String? // ลิงก์ Google Maps ที่ลูกค้าส่งมา
+  latitude        Float? // พิกัดที่ดึงจากลิงก์ ใช้วิเคราะห์โซนและนำทาง
+  longitude       Float?
+  segment         CustomerSegment? // ประเภทลูกค้า ใช้กับ CUSTOMER เท่านั้น
+  zone            String? // โซน/ตำบล แยกจากที่อยู่เพื่อใช้จัดกลุ่มในรายงาน
+  source          CustomerSource?    @relation(fields: [sourceId], references: [id])
+  sourceId        String? // รู้จักร้านจากช่องทางไหน ว่าง = ไม่ทราบ
+  movements       Movement[]
+  orders          Order[]
+  createdAt       DateTime           @default(now())
 }
 
 // ช่องทางที่ได้ลูกค้า เช่น บอกต่อ, ใบปลิว เพิ่มเองได้จากหน้าจอเผื่อช่องทางออนไลน์ในอนาคต
@@ -133,25 +143,26 @@ model Movement {
 
 // ออเดอร์ที่ลูกค้ายืนยันแล้ว ยังไม่ตัดสต็อกจนกว่าคนขับจะส่งสำเร็จ
 model Order {
-  id              String      @id @default(cuid())
-  partner         Partner     @relation(fields: [partnerId], references: [id])
+  id              String             @id @default(cuid())
+  partner         Partner            @relation(fields: [partnerId], references: [id])
   partnerId       String
-  warehouse       Warehouse   @relation(fields: [warehouseId], references: [id])
+  warehouse       Warehouse          @relation(fields: [warehouseId], references: [id])
   warehouseId     String // คลังที่โหลดของขึ้นรถ
-  orderDate       DateTime    @default(now()) // วันที่ลูกค้าสั่ง แก้ย้อนหลังได้ (ต่างจาก createdAt)
+  orderDate       DateTime           @default(now()) // วันที่ลูกค้าสั่ง แก้ย้อนหลังได้ (ต่างจาก createdAt)
   deliveryDate    DateTime
   deliveryRound   String // คีย์รอบจัดส่ง เช่น "08-10" ดูรายการใน lib/delivery.ts
   deliveryAddress String? // ที่อยู่เฉพาะออเดอร์นี้ ว่าง = ใช้ที่อยู่ลูกค้า
   note            String? // หมายเหตุถึงคนขับ
-  status          OrderStatus @default(CONFIRMED)
+  status          OrderStatus        @default(CONFIRMED)
   issueReason     String? // เหตุผลที่ส่งไม่ครบหรือส่งไม่ได้ เช่น แพ็คน้ำแตก
   deliveredAt     DateTime?
   paidAt          DateTime? // admin ยืนยันว่าลูกค้าโอนแล้ว
-  movement        Movement?   @relation(fields: [movementId], references: [id], onDelete: SetNull)
-  movementId      String?     @unique
+  movement        Movement?          @relation(fields: [movementId], references: [id], onDelete: SetNull)
+  movementId      String?            @unique
   lines           OrderLine[]
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  incidents       CustomerIncident[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
 }
 
 model OrderLine {
@@ -196,6 +207,20 @@ model TransferLine {
   product    Product  @relation(fields: [productId], references: [id])
   productId  String
   quantity   Int
+}
+
+// ประวัติเหตุการณ์ของลูกค้า (ยกเลิก/ติดต่อไม่ได้) บันทึกอัตโนมัติจากคนขับและตอนยกเลิกออเดอร์ หรือบันทึกเอง
+model CustomerIncident {
+  id        String       @id @default(cuid())
+  partner   Partner      @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  partnerId String
+  order     Order?       @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderId   String?
+  kind      IncidentKind
+  note      String?
+  createdAt DateTime     @default(now())
+
+  @@index([partnerId, createdAt])
 }
 
 // ค่าใช้จ่ายดำเนินงาน เช่น ค่าเช่า ค่าน้ำมัน ค่าแรง ใช้หักจากกำไรขั้นต้นเพื่อหากำไรสุทธิ

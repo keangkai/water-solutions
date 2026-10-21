@@ -12,6 +12,7 @@ export type DriverOrder = {
   name: string;
   companyName: string | null;
   facebookName: string | null;
+  blacklistReason: string | null; // มีค่า = ลูกค้าอยู่ในบัญชีดำ
   phone: string | null;
   address: string | null;
   coords: { latitude: number; longitude: number } | null;
@@ -59,6 +60,11 @@ export function DriverOrderCard({ order }: { order: DriverOrder }) {
           <div className="text-lg font-semibold text-slate-900 break-words">{order.name}</div>
           {order.companyName && <div className="text-sm text-slate-500">{order.companyName}</div>}
           {order.facebookName && <div className="text-sm text-slate-400">Facebook: {order.facebookName}</div>}
+          {order.blacklistReason && (
+            <div className="mt-1.5 text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg px-2 py-1.5">
+              ⚠️ ลูกค้าบัญชีดำ: {order.blacklistReason} — โทรยืนยันก่อนไปส่ง
+            </div>
+          )}
         </div>
         {!isOpen && (
           <span className={`shrink-0 text-xs px-2 py-0.5 rounded-full border ${status.badge}`}>{status.label}</span>

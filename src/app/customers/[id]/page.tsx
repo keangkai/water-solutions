@@ -8,6 +8,9 @@ import { behaviorInfo, classifyBehavior } from "@/lib/customer-behavior";
 import { ArrowLeft, Phone, MapPin, Warehouse as WarehouseIcon } from "lucide-react";
 import { LinkifiedText } from "@/components/linkified-text";
 import { facebookNameIfDifferent } from "@/lib/customer-labels";
+import { BlacklistBadge } from "@/components/blacklist-badge";
+import { BlacklistSection } from "./blacklist-section";
+import { recentIncidentCounts } from "@/lib/incidents";
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -16,6 +19,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     where: { id },
     include: {
       source: true,
+      incidents: { orderBy: { createdAt: "desc" }, take: 20 },
       movements: {
         where: { type: "OUT" },
         orderBy: [{ date: "desc" }, { createdAt: "desc" }],
@@ -24,6 +28,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
     },
   });
   if (!customer) notFound();
+  const recentCount = (await recentIncidentCounts([customer.id])).get(customer.id) ?? 0;
 
   const orders = customer.movements.map((m) => ({
     ...m,
@@ -59,6 +64,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
         <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-xl font-semibold text-slate-900">{customer.name}</h1>
           <span className={`text-xs px-2 py-0.5 rounded-full border ${info.badge}`}>{info.label}</span>
+          {customer.isBlacklisted && <BlacklistBadge />}
         </div>
         {customer.companyName && <div className="text-sm text-slate-500">{customer.companyName}</div>}
         {facebookNameIfDifferent(customer.name, customer.facebookName) && (
@@ -79,6 +85,17 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
           )}
         </div>
       </div>
+
+      {customer.type === "CUSTOMER" && (
+        <BlacklistSection
+          partnerId={customer.id}
+          isBlacklisted={customer.isBlacklisted}
+          reason={customer.blacklistReason}
+          blacklistedAt={customer.blacklistedAt}
+          incidents={customer.incidents}
+          recentCount={recentCount}
+        />
+      )}
 
       <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm text-sm text-slate-600">
         {info.hint}

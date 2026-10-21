@@ -66,6 +66,7 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
     name: o.partner.name,
     companyName: o.partner.companyName,
     facebookName: facebookNameIfDifferent(o.partner.name, o.partner.facebookName),
+    blacklistReason: o.partner.isBlacklisted ? o.partner.blacklistReason ?? "บัญชีดำ" : null,
     phone: o.partner.phone,
     address: o.deliveryAddress ?? o.partner.address,
     coords:

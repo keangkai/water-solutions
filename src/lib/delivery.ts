@@ -5,6 +5,8 @@ export const DELIVERY_ROUNDS = [
   { key: "10-12", label: "10:00–12:00" },
   { key: "13-15", label: "13:00–15:00" },
   { key: "15-17", label: "15:00–17:00" },
+  { key: "17-19", label: "17:00–19:00" },
+  { key: "19-21", label: "19:00–21:00" },
 ] as const;
 
 export function roundLabel(key: string) {

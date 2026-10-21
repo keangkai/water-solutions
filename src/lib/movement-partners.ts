@@ -15,7 +15,7 @@ export type PartnerOptions = Record<MovementKind, PartnerOption[]>;
 
 // keepPartnerId = คู่ค้าเดิมของใบที่กำลังแก้ ถ้าเป็นข้อมูลเก่าที่ประเภทไม่ตรงกฎ จะยังเลือกต่อได้และมีป้ายประเภทกำกับ
 export function partnerOptionsFor(
-  partners: { id: string; name: string; type: PartnerKind; facebookName?: string | null }[],
+  partners: { id: string; name: string; type: PartnerKind; facebookName?: string | null; isBlacklisted?: boolean }[],
   keepPartnerId?: string
 ): PartnerOptions {
   const build = (kind: MovementKind): PartnerOption[] =>
@@ -24,7 +24,8 @@ export function partnerOptionsFor(
       .map((p) => {
         const fbName = facebookNameIfDifferent(p.name, p.facebookName);
         const fb = fbName ? ` · FB: ${fbName}` : "";
-        return { id: p.id, label: p.type === partnerTypeFor[kind] ? `${p.name}${fb}` : `${p.name} (${kindLabel[p.type]})${fb}` };
+        const mark = p.isBlacklisted ? "⛔ " : "";
+        return { id: p.id, label: mark + (p.type === partnerTypeFor[kind] ? `${p.name}${fb}` : `${p.name} (${kindLabel[p.type]})${fb}`) };
       });
   return { IN: build("IN"), OUT: build("OUT") };
 }

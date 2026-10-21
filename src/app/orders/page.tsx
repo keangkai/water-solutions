@@ -7,6 +7,7 @@ import { DELIVERY_ROUNDS, earliestDeliveryDate, isDeliveryRound, todayInBangkok 
 import { bkkDay } from "@/lib/report-period";
 import { warehouseOptionsFor } from "@/lib/warehouses";
 import { AddedBanner } from "@/components/added-banner";
+import { recentIncidentCounts } from "@/lib/incidents";
 import { ClipboardCheck } from "lucide-react";
 
 const tabs = {
@@ -40,7 +41,8 @@ export default async function OrdersPage({
   const tab: TabKey = params.tab && params.tab in tabs ? (params.tab as TabKey) : "pending";
   const today = todayInBangkok();
 
-  const [customers, products, warehouses, allFetched] = await Promise.all([
+  const incidentCounts = await recentIncidentCounts();
+  const [customerRows, products, warehouses, allFetched] = await Promise.all([
     prisma.partner.findMany({ where: { type: "CUSTOMER" }, orderBy: { name: "asc" } }),
     prisma.product.findMany({ orderBy: { name: "asc" } }),
     prisma.warehouse.findMany({ orderBy: { createdAt: "asc" } }),
@@ -50,6 +52,7 @@ export default async function OrdersPage({
     }),
   ]);
 
+  const customers = customerRows.map((c) => ({ ...c, recentIncidents: incidentCounts.get(c.id) ?? 0 }));
   let orders = allFetched;
   const needle = filterText.toLowerCase();
   const matches = (o: (typeof orders)[number]) =>
