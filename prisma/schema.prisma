@@ -115,6 +115,8 @@ model CustomerSource {
 model Warehouse {
   id           String       @id @default(cuid())
   name         String // เช่น บ้านแม่, บ้านย่า
+  latitude     Float? // พิกัดคลัง ใช้เรียงงานคนขับจากใกล้ไปไกล
+  longitude    Float?
   isActive     Boolean      @default(true) // ปิดแล้วไม่แสดงในตัวเลือกใหม่ แต่ประวัติและสต็อกเดิมยังอยู่
   movements    Movement[]
   stockCounts  StockCount[]
