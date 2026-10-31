@@ -8,6 +8,8 @@ import { Contact, Search, Phone, MapPin } from "lucide-react";
 import { LinkifiedText } from "@/components/linkified-text";
 import { AddedBanner } from "@/components/added-banner";
 import { facebookNameIfDifferent } from "@/lib/customer-labels";
+import { BlacklistBadge } from "@/components/blacklist-badge";
+import { recentIncidentCounts } from "@/lib/incidents";
 
 // รายชื่อลูกค้าพร้อมข้อมูลติดต่อและสรุปการซื้อ ค้นหาจากชื่อ เบอร์ ที่อยู่ หรือโซน
 async function loadCustomerList() {
@@ -18,6 +20,8 @@ async function loadCustomerList() {
       movements: { where: { type: "OUT" }, include: { lines: true } },
     },
   });
+
+  const incidentCounts = await recentIncidentCounts();
 
   return partners
     .filter((p) => p.type === "CUSTOMER" || p.movements.length > 0)
@@ -30,6 +34,9 @@ async function loadCustomerList() {
         name: p.name,
         companyName: p.companyName,
         facebookName: p.facebookName,
+        isBlacklisted: p.isBlacklisted,
+        blacklistReason: p.blacklistReason,
+        recentIncidents: incidentCounts.get(p.id) ?? 0,
         type: p.type,
         phone: p.phone,
         address: p.address,
@@ -48,17 +55,20 @@ async function loadCustomerList() {
 export default async function CustomerListPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; segment?: string; customer?: string; added?: string }>;
+  searchParams: Promise<{ q?: string; segment?: string; bl?: string; customer?: string; added?: string }>;
 }) {
   const params = await searchParams;
   const q = (params.q ?? "").trim();
   const segment =
     params.segment && (params.segment in segmentLabel || params.segment === "NONE") ? params.segment : "";
 
+  const onlyBlacklisted = params.bl === "1";
   const all = await loadCustomerList();
+  const blacklistedCount = all.filter((c) => c.isBlacklisted).length;
   const justAdded = params.added === "1" ? all.find((c) => c.id === params.customer) : undefined;
   const needle = q.toLowerCase();
   const customers = all.filter((c) => {
+    if (onlyBlacklisted && !c.isBlacklisted) return false;
     if (segment === "NONE" ? c.segment !== null : segment && c.segment !== segment) return false;
     if (!needle) return true;
     return [c.name, c.companyName, c.facebookName, c.phone, c.address, c.zone].some((v) => v?.toLowerCase().includes(needle));
@@ -71,6 +81,7 @@ export default async function CustomerListPage({
     const s = query.toString();
     return s ? `/customers/list?${s}` : "/customers/list";
   };
+  const blacklistHref = `/customers/list?${new URLSearchParams({ ...(q ? { q } : {}), bl: "1" }).toString()}`;
   const segmentChips: { value: string; label: string }[] = [
     { value: "", label: "ทั้งหมด" },
     ...(Object.keys(segmentLabel) as CustomerSegment[]).map((key) => ({ value: key, label: segmentLabel[key] })),
@@ -121,6 +132,14 @@ export default async function CustomerListPage({
               {chip.label}
             </Link>
           ))}
+          <Link
+            href={blacklistHref}
+            className={`px-3 py-1.5 min-h-[44px] inline-flex items-center gap-1 rounded-full text-xs border transition-colors touch-manipulation ${
+              onlyBlacklisted ? "bg-red-50 text-red-700 border-red-200 font-medium" : "bg-white text-red-600 border-red-100 hover:border-red-200"
+            }`}
+          >
+            บัญชีดำ ({blacklistedCount})
+          </Link>
         </div>
       </form>
 
@@ -154,6 +173,14 @@ export default async function CustomerListPage({
                   >
                     {c.name}
                   </Link>
+                  {c.isBlacklisted && (
+                    <div>
+                      <BlacklistBadge reason={c.blacklistReason} showReason />
+                    </div>
+                  )}
+                  {!c.isBlacklisted && c.recentIncidents > 0 && (
+                    <div className="text-xs text-amber-700">ยกเลิก/ติดต่อไม่ได้ {c.recentIncidents} ครั้งใน 90 วัน</div>
+                  )}
                   {c.companyName && <div className="text-xs text-slate-500">{c.companyName}</div>}
                   {facebookNameIfDifferent(c.name, c.facebookName) && (
                     <div className="text-xs text-slate-400">Facebook: {facebookNameIfDifferent(c.name, c.facebookName)}</div>

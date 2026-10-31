@@ -46,6 +46,9 @@ export async function createOrder(formData: FormData) {
   const parsed = parseOrder(formData);
   if (!parsed) return;
   if (!(await warehouseUsable(parsed.data.warehouseId))) return;
+  // ลูกค้าบัญชีดำ: ต้องยืนยันจึงจะสร้างออเดอร์ได้ (กันกดพลาด ไม่ใช่การห้ามเด็ดขาด)
+  const partner = await prisma.partner.findUnique({ where: { id: parsed.data.partnerId }, select: { isBlacklisted: true } });
+  if (partner?.isBlacklisted && formData.get("confirmBlacklisted") !== "1") return;
   // วันส่งย้อนหลังได้ไม่เกิน BACKDATE_DAYS วัน (แก้ไข/เลื่อนวันของออเดอร์เดิมไม่ติดเงื่อนไขนี้)
   if (parsed.data.deliveryDate.toISOString().slice(0, 10) < earliestDeliveryDate()) return;
 
@@ -78,13 +81,23 @@ export async function updateOrder(id: string, formData: FormData) {
   revalidateOrderPaths();
 }
 
-export async function cancelOrder(id: string) {
+export async function cancelOrder(id: string, formData?: FormData) {
   if ((await currentRole()) !== "admin") return;
 
-  await prisma.order.updateMany({
+  const { count } = await prisma.order.updateMany({
     where: { id, status: { in: ["CONFIRMED", "FAILED"] } },
     data: { status: "CANCELLED" },
   });
+
+  // ติ๊ก "ลูกค้าเป็นฝ่ายยกเลิก" แล้วบันทึกเป็นประวัติของลูกค้า (ใช้ประกอบการขึ้นบัญชีดำ)
+  if (count > 0 && formData?.get("byCustomer") === "1") {
+    const order = await prisma.order.findUnique({ where: { id }, select: { partnerId: true } });
+    if (order) {
+      await prisma.customerIncident.create({ data: { partnerId: order.partnerId, orderId: id, kind: "CANCELLED", note: "ลูกค้ายกเลิกออเดอร์" } });
+      revalidatePath("/customers/list");
+      revalidatePath(`/customers/${order.partnerId}`);
+    }
+  }
 
   revalidateOrderPaths();
 }

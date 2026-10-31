@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { currentRole } from "@/lib/auth";
 import { roundLabel, todayInBangkok } from "@/lib/delivery";
 import { getStockSnapshot, stockKey } from "@/lib/stock";
+import { incidentKindForReason } from "@/lib/blacklist";
 
 // stockWarning = สต็อกในระบบไม่พอ คนขับยืนยันส่งต่อได้ (overrideStock) แต่จะมีบันทึกให้ admin เห็น
 type Result = { error: string } | { stockWarning: string } | { ok: true };
@@ -114,6 +115,15 @@ export async function failOrder(id: string, formData: FormData): Promise<Result>
     data: { status: "FAILED", issueReason: reason },
   });
   if (count === 0) return { error: "ออเดอร์นี้ถูกบันทึกไปแล้ว รีเฟรชหน้าเพื่อดูสถานะล่าสุด" };
+
+  // ลูกค้าไม่อยู่/ไม่รับสาย/ยกเลิก: บันทึกเป็นประวัติของลูกค้าอัตโนมัติ (ใช้ประกอบการขึ้นบัญชีดำ)
+  const kind = incidentKindForReason(reason);
+  if (kind) {
+    const order = await prisma.order.findUnique({ where: { id }, select: { partnerId: true } });
+    if (order) await prisma.customerIncident.create({ data: { partnerId: order.partnerId, orderId: id, kind, note: reason } });
+    revalidatePath("/customers/list");
+    revalidatePath(`/customers/${order?.partnerId}`);
+  }
 
   revalidateDeliveryPaths();
   return { ok: true };

@@ -8,6 +8,7 @@ import { formatDate } from "@/lib/format-date";
 import { LinkifiedText } from "@/components/linkified-text";
 import { orderStatusInfo, roundLabel, type OrderStatus } from "@/lib/delivery";
 import { facebookNameIfDifferent } from "@/lib/customer-labels";
+import { BlacklistBadge } from "@/components/blacklist-badge";
 
 export type OrderCardData = {
   id: string;
@@ -22,7 +23,7 @@ export type OrderCardData = {
   issueReason: string | null;
   deliveredAt: Date | null;
   paidAt: Date | null;
-  partner: { name: string; companyName: string | null; facebookName: string | null; phone: string | null; address: string | null };
+  partner: { name: string; companyName: string | null; facebookName: string | null; phone: string | null; address: string | null; isBlacklisted: boolean; blacklistReason: string | null };
   warehouse: { name: string };
   lines: {
     id: string;
@@ -83,7 +84,10 @@ export function OrderCard({
               สั่ง {formatDate(order.orderDate)} · ส่ง {formatDate(order.deliveryDate)} · รอบ {roundLabel(order.deliveryRound)}
             </span>
           </div>
-          <div className="mt-1.5 font-medium text-slate-900">{order.partner.name}</div>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2 font-medium text-slate-900">
+            {order.partner.name}
+            {order.partner.isBlacklisted && <BlacklistBadge reason={order.partner.blacklistReason} showReason />}
+          </div>
           {order.partner.companyName && <div className="text-xs text-slate-500">{order.partner.companyName}</div>}
           {facebookNameIfDifferent(order.partner.name, order.partner.facebookName) && (
             <div className="text-xs text-slate-400">Facebook: {facebookNameIfDifferent(order.partner.name, order.partner.facebookName)}</div>
@@ -170,7 +174,11 @@ export function OrderCard({
             ))}
           {isOpen &&
             (confirmingCancel ? (
-              <form action={cancelOrder.bind(null, order.id)} className="flex items-center gap-2">
+              <form action={cancelOrder.bind(null, order.id)} className="flex flex-wrap items-center gap-2">
+                <label className="flex items-center gap-1.5 text-xs text-slate-600 min-h-[44px] w-full">
+                  <input type="checkbox" name="byCustomer" value="1" className="size-5" />
+                  ลูกค้าเป็นฝ่ายยกเลิก (บันทึกเป็นประวัติของลูกค้า)
+                </label>
                 <button className="text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg px-3 min-h-[44px] touch-manipulation">
                   ยืนยันยกเลิกออเดอร์
                 </button>

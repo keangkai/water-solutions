@@ -7,8 +7,14 @@ import { PartnerFields, type PartnerValues, type SourceOption } from "./partner-
 import { segmentLabel } from "@/lib/customer-labels";
 import { LinkifiedText } from "@/components/linkified-text";
 import { facebookNameIfDifferent } from "@/lib/customer-labels";
+import { BlacklistBadge } from "@/components/blacklist-badge";
 
-type Partner = PartnerValues & { id: string; source: { name: string } | null };
+type Partner = PartnerValues & {
+  id: string;
+  source: { name: string } | null;
+  isBlacklisted: boolean;
+  blacklistReason: string | null;
+};
 
 const typeLabel = { SUPPLIER: "ซัพพลายเออร์", CUSTOMER: "ลูกค้า" } as const;
 const typeBadge = {
@@ -33,6 +39,7 @@ export function PartnerCard({
         <div className="flex items-start justify-between">
           <div>
             <div className="font-medium text-slate-900">{partner.name}</div>
+            {partner.isBlacklisted && <BlacklistBadge reason={partner.blacklistReason} showReason />}
             {partner.companyName && <div className="text-xs text-slate-500">{partner.companyName}</div>}
             {facebookNameIfDifferent(partner.name, partner.facebookName) && (
               <div className="text-xs text-slate-400">Facebook: {facebookNameIfDifferent(partner.name, partner.facebookName)}</div>

@@ -7,6 +7,7 @@ import { formatDate } from "@/lib/format-date";
 import { DELIVERY_ROUNDS, roundLabel, shiftDateKey, todayInBangkok } from "@/lib/delivery";
 import { DriverOrderCard, type DriverOrder } from "./driver-order-card";
 import { Truck, ChevronLeft, ChevronRight, LogOut, Package, ClipboardList } from "lucide-react";
+import { sortByDistance } from "@/lib/route-order";
 import { facebookNameIfDifferent } from "@/lib/customer-labels";
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -23,7 +24,7 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
       status: { in: ["CONFIRMED", "DELIVERED", "FAILED"] },
     },
     orderBy: { createdAt: "asc" },
-    include: { partner: true, lines: { include: { product: true } } },
+    include: { partner: true, warehouse: true, lines: { include: { product: true } } },
   });
 
   // ของที่ต้องโหลดขึ้นรถ รวมตามขนาดน้ำของออเดอร์ที่ยังไม่ได้ส่ง
@@ -66,6 +67,7 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
     name: o.partner.name,
     companyName: o.partner.companyName,
     facebookName: facebookNameIfDifferent(o.partner.name, o.partner.facebookName),
+    blacklistReason: o.partner.isBlacklisted ? o.partner.blacklistReason ?? "บัญชีดำ" : null,
     phone: o.partner.phone,
     address: o.deliveryAddress ?? o.partner.address,
     coords:
@@ -98,11 +100,16 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
   const rounds = roundKeys
     .map((key) => {
       const roundOrders = orders.filter((o) => o.deliveryRound === key);
-      // ที่ยังไม่ได้ส่งขึ้นก่อน
-      roundOrders.sort((a, b) => Number(a.status !== "CONFIRMED") - Number(b.status !== "CONFIRMED"));
+      // ใกล้คลังไปไกล (ไม่มีพิกัดไว้ท้าย) แล้วให้ที่ยังไม่ได้ส่งขึ้นก่อน (sort เสถียร จึงคงลำดับระยะไว้)
+      const byDistance = sortByDistance(
+        roundOrders,
+        (o) => (o.warehouse.latitude != null && o.warehouse.longitude != null ? { latitude: o.warehouse.latitude, longitude: o.warehouse.longitude } : null),
+        (o) => (!o.deliveryAddress && o.partner.latitude != null && o.partner.longitude != null ? { latitude: o.partner.latitude, longitude: o.partner.longitude } : null)
+      );
+      byDistance.sort((a, b) => Number(a.status !== "CONFIRMED") - Number(b.status !== "CONFIRMED"));
       return {
         key,
-        orders: roundOrders.map(toCard),
+        orders: byDistance.map(toCard),
         remaining: roundOrders.filter((o) => o.status === "CONFIRMED").length,
         packs: roundOrders.reduce((sum, o) => sum + o.lines.reduce((s, l) => s + l.quantity, 0), 0),
       };
