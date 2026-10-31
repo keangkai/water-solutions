@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Pencil, Phone, MapPin, Warehouse as WarehouseIcon, AlertTriangle } from "lucide-react";
-import { cancelOrder, setOrderPaid } from "./actions";
+import { cancelOrder, confirmDeliveredByAdmin, setOrderPaid } from "./actions";
 import { OrderForm, type OrderCustomer, type OrderProduct, type OrderWarehouse } from "./order-form";
 import { formatDate } from "@/lib/format-date";
 import { LinkifiedText } from "@/components/linkified-text";
@@ -50,6 +50,25 @@ export function OrderCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  // ยืนยันแทนคนขับ: เลือกแบบ (ส่งแล้ว / ส่งแล้ว+โอนแล้ว) แล้วต้องกดยืนยันอีกครั้ง
+  const [confirmingDeliver, setConfirmingDeliver] = useState<"delivered" | "paid" | null>(null);
+  const [deliverError, setDeliverError] = useState<string | null>(null);
+  const [stockWarning, setStockWarning] = useState<string | null>(null);
+  const [delivering, startDelivering] = useTransition();
+
+  const confirmDeliver = (override: boolean) => {
+    if (!confirmingDeliver) return;
+    setDeliverError(null);
+    startDelivering(async () => {
+      const result = await confirmDeliveredByAdmin(order.id, confirmingDeliver === "paid", override);
+      if ("error" in result) setDeliverError(result.error);
+      else if ("stockWarning" in result) setStockWarning(result.stockWarning);
+      else {
+        setStockWarning(null);
+        setConfirmingDeliver(null);
+      }
+    });
+  };
 
   if (editing) {
     return (
@@ -153,6 +172,61 @@ export function OrderCard({
           <span>
             {order.status === "FAILED" ? "ส่งไม่ได้" : "ส่งไม่ครบ"}: {order.issueReason}
           </span>
+        </div>
+      )}
+
+      {isOpen && (
+        <div className="space-y-2">
+          {confirmingDeliver ? (
+            <div className="space-y-2 bg-emerald-50 border border-emerald-200 rounded-lg p-3 text-sm text-emerald-900">
+              <div>
+                ยืนยันว่าส่งครบ {total.toLocaleString()} บาทแล้ว{confirmingDeliver === "paid" ? " และได้รับโอนเงินแล้ว" : ""}?
+                <div className="text-xs text-emerald-700 mt-0.5">ระบบจะตัดสต็อกและบันทึกเป็นยอดขาย ส่งไม่ครบให้คนขับกดที่หน้าคนขับ</div>
+              </div>
+              {stockWarning && (
+                <div className="text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  {stockWarning}
+                  <div className="text-xs mt-1">ถ้าของออกไปจริง กดยืนยันต่อ แล้วตรวจยอดรับเข้าภายหลัง</div>
+                </div>
+              )}
+              {deliverError && <div className="text-red-700">{deliverError}</div>}
+              <div className="flex flex-wrap gap-2">
+                <button
+                  disabled={delivering}
+                  onClick={() => confirmDeliver(!!stockWarning)}
+                  className="min-h-[44px] px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium touch-manipulation active:opacity-80 disabled:opacity-60"
+                >
+                  {delivering ? "กำลังบันทึก…" : stockWarning ? "ยืนยันต่อแม้สต็อกไม่พอ" : "ยืนยัน"}
+                </button>
+                <button
+                  disabled={delivering}
+                  onClick={() => {
+                    setConfirmingDeliver(null);
+                    setStockWarning(null);
+                    setDeliverError(null);
+                  }}
+                  className="min-h-[44px] px-3 text-slate-600 hover:text-slate-900"
+                >
+                  ยกเลิก
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <button
+                onClick={() => setConfirmingDeliver("delivered")}
+                className="min-h-[44px] rounded-lg border border-emerald-300 text-emerald-700 hover:bg-emerald-50 text-sm font-medium touch-manipulation active:scale-95"
+              >
+                ✓ ส่งเรียบร้อยแล้ว
+              </button>
+              <button
+                onClick={() => setConfirmingDeliver("paid")}
+                className="min-h-[44px] rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium touch-manipulation active:scale-95"
+              >
+                ✓ ส่งแล้ว + ได้รับโอนแล้ว
+              </button>
+            </div>
+          )}
         </div>
       )}
 
