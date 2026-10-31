@@ -22,10 +22,13 @@ function revalidateDeliveryPaths() {
 // คนขับกดส่งแล้ว: บันทึกจำนวนที่ส่งจริง แล้วสร้างใบขายออกเพื่อตัดสต็อกและนับยอดขาย
 // จำนวนที่ลูกค้าสั่งไม่ถูกแก้ ถ้าส่งไม่ครบต้องใส่เหตุผล
 export async function deliverOrder(id: string, formData: FormData): Promise<Result> {
-  if (!(await currentRole())) return { error: "กรุณาเข้าสู่ระบบใหม่" };
+  const role = await currentRole();
+  if (!role) return { error: "กรุณาเข้าสู่ระบบใหม่" };
 
   const order = await prisma.order.findUnique({ where: { id }, include: { lines: true } });
-  if (!order || order.status !== "CONFIRMED") return { error: "ออเดอร์นี้ถูกบันทึกไปแล้ว รีเฟรชหน้าเพื่อดูสถานะล่าสุด" };
+  // admin ยืนยันย้อนหลังได้แม้คนขับเคยกด "ส่งไม่ได้" (เช่น ส่งได้ในภายหลัง) คนขับกดได้เฉพาะงานที่ยังรอส่ง
+  const allowed = role === "admin" ? ["CONFIRMED", "FAILED"] : ["CONFIRMED"];
+  if (!order || !allowed.includes(order.status)) return { error: "ออเดอร์นี้ถูกบันทึกไปแล้ว รีเฟรชหน้าเพื่อดูสถานะล่าสุด" };
 
   const delivered = order.lines.map((line) => {
     const raw = formData.get(`delivered.${line.id}`);
@@ -70,7 +73,7 @@ export async function deliverOrder(id: string, formData: FormData): Promise<Resu
     await prisma.$transaction([
       // where มีสถานะด้วย กันกดส่งซ้ำแล้วได้ใบขายออกสองใบ
       prisma.order.update({
-        where: { id, status: "CONFIRMED" },
+        where: { id, status: order.status },
         data: {
           status: "DELIVERED",
           deliveredAt: new Date(),

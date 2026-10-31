@@ -6,6 +6,7 @@ import { currentRole } from "@/lib/auth";
 import { earliestDeliveryDate, isDeliveryRound } from "@/lib/delivery";
 import { parseLines } from "@/lib/parse-lines";
 import { warehouseUsable } from "@/lib/warehouses";
+import { deliverOrder } from "@/app/driver/actions";
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -112,4 +113,24 @@ export async function setOrderPaid(id: string, paid: boolean) {
   });
 
   revalidateOrderPaths();
+}
+
+// admin ยืนยันแทนคนขับว่าส่งครบตามที่สั่งแล้ว (ตัดสต็อก + สร้างใบขายออก) และถ้า paid=true ยืนยันว่าได้รับโอนแล้วในครั้งเดียว
+// ส่งไม่ครบให้คนขับกดที่หน้าคนขับ เพราะต้องระบุจำนวนจริง
+export async function confirmDeliveredByAdmin(
+  id: string,
+  paid: boolean,
+  overrideStock: boolean
+): Promise<{ error: string } | { stockWarning: string } | { ok: true }> {
+  if ((await currentRole()) !== "admin") return { error: "เฉพาะ admin เท่านั้นที่ยืนยันแทนคนขับได้" };
+
+  const formData = new FormData();
+  if (overrideStock) formData.set("overrideStock", "1");
+  const result = await deliverOrder(id, formData);
+  if (!("ok" in result)) return result;
+
+  if (paid) await prisma.order.updateMany({ where: { id, status: "DELIVERED" }, data: { paidAt: new Date() } });
+
+  revalidateOrderPaths();
+  return result;
 }
