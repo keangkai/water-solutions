@@ -3,7 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { OrderForm } from "./order-form";
 import { OrderCard } from "./order-card";
-import { DELIVERY_ROUNDS, earliestDeliveryDate, isDeliveryRound, todayInBangkok } from "@/lib/delivery";
+import { DELIVERY_ROUNDS, earliestDeliveryDate, isDeliveryRound, shiftDateKey, todayInBangkok } from "@/lib/delivery";
 import { bkkDay } from "@/lib/report-period";
 import { warehouseOptionsFor } from "@/lib/warehouses";
 import { AddedBanner } from "@/components/added-banner";
@@ -53,6 +53,19 @@ export default async function OrdersPage({
   ]);
 
   const customers = customerRows.map((c) => ({ ...c, recentIncidents: incidentCounts.get(c.id) ?? 0 }));
+  // ลูกค้าที่สั่งบ่อยใน 90 วันล่าสุด (ไม่นับที่ยกเลิก) เรียงตามจำนวนครั้ง แล้วล่าสุดก่อน
+  const since = new Date(shiftDateKey(today, -90)).getTime();
+  const usage = new Map<string, { count: number; last: number }>();
+  for (const o of allFetched) {
+    if (o.status === "CANCELLED" || o.createdAt.getTime() < since) continue;
+    const u = usage.get(o.partnerId) ?? { count: 0, last: 0 };
+    usage.set(o.partnerId, { count: u.count + 1, last: Math.max(u.last, o.createdAt.getTime()) });
+  }
+  const quickCustomerIds = [...usage.entries()]
+    .filter(([id]) => customers.some((c) => c.id === id))
+    .sort((a, b) => b[1].count - a[1].count || b[1].last - a[1].last)
+    .slice(0, 6)
+    .map(([id]) => id);
   let orders = allFetched;
   const needle = filterText.toLowerCase();
   const matches = (o: (typeof orders)[number]) =>
@@ -96,6 +109,7 @@ export default async function OrdersPage({
           today={today}
           minDeliveryDate={earliestDeliveryDate(today)}
           defaultCustomerId={justAdded?.id}
+          quickCustomerIds={quickCustomerIds}
         />
       ) : (
         <div className="bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl p-4">

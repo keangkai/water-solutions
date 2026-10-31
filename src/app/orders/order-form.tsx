@@ -1,12 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { Plus, X } from "lucide-react";
 import { createOrder, updateOrder } from "./actions";
 import { DELIVERY_ROUNDS } from "@/lib/delivery";
 import { DateInput } from "@/components/date-input";
-import { facebookNameIfDifferent } from "@/lib/customer-labels";
+import { CustomerPicker } from "@/components/customer-picker";
 
 export type OrderProduct = { id: string; name: string; unit: string; defaultSellPrice: number | null };
 export type OrderCustomer = {
@@ -19,6 +18,7 @@ export type OrderCustomer = {
   recentIncidents: number; // ยกเลิก/ติดต่อไม่ได้ ในช่วงล่าสุด
   phone: string | null;
   address: string | null;
+  zone: string | null;
 };
 export type OrderWarehouse = { id: string; name: string };
 export type InitialOrder = {
@@ -48,6 +48,7 @@ export function OrderForm({
   today,
   minDeliveryDate,
   defaultCustomerId,
+  quickCustomerIds = [],
   initialOrder,
   onDone,
 }: {
@@ -57,12 +58,13 @@ export function OrderForm({
   today: string;
   minDeliveryDate?: string; // วันส่งที่เก่าสุดสำหรับออเดอร์ใหม่ กำหนดโดย server
   defaultCustomerId?: string; // เลือกลูกค้าไว้ให้ (เช่น เพิ่งเพิ่มลูกค้าใหม่มา)
+  quickCustomerIds?: string[]; // ลูกค้าที่สั่งบ่อย/ล่าสุด server เรียงให้แล้ว
   initialOrder?: InitialOrder;
   onDone?: () => void;
 }) {
   const isEdit = !!initialOrder;
   const emptyRow = (): LineRow => ({ productId: products[0]?.id ?? "", quantity: "", unitPrice: defaultPrice(products[0]) });
-  const [partnerId, setPartnerId] = useState(initialOrder?.partnerId ?? defaultCustomerId ?? customers[0]?.id ?? "");
+  const [partnerId, setPartnerId] = useState(initialOrder?.partnerId ?? defaultCustomerId ?? "");
   const [rows, setRows] = useState<LineRow[]>(
     initialOrder
       ? initialOrder.lines.map((l) => ({ productId: l.productId, quantity: String(l.quantity), unitPrice: String(l.unitPrice) }))
@@ -88,28 +90,14 @@ export function OrderForm({
       className={`border rounded-xl p-5 shadow-sm space-y-4 ${isEdit ? "bg-sky-50/40 border-sky-200" : "bg-white border-slate-200"}`}
     >
       <div className="flex flex-wrap gap-3 items-end">
-        <div className="flex flex-col gap-1 w-full sm:w-auto sm:min-w-[200px]">
-          <div className="flex items-baseline justify-between gap-3">
-            <label className="text-xs font-medium text-slate-500">ลูกค้า</label>
-            <Link href="/customers/new?return=%2Forders" className="text-xs text-sky-600 hover:text-sky-700 min-h-[44px] inline-flex items-center touch-manipulation">
-              + ลูกค้าใหม่
-            </Link>
-          </div>
-          <select
-            name="partnerId"
-            required
-            value={partnerId}
-            onChange={(e) => setPartnerId(e.target.value)}
-            className={inputClass}
-          >
-            {customers.map((c) => (
-              <option key={c.id} value={c.id}>
-                {(c.isBlacklisted ? "⛔ " : "") +
-                  [c.companyName ? `${c.name} (${c.companyName})` : c.name, facebookNameIfDifferent(c.name, c.facebookName) && `FB: ${facebookNameIfDifferent(c.name, c.facebookName)}`].filter(Boolean).join(" · ")}
-              </option>
-            ))}
-          </select>
-        </div>
+        <CustomerPicker
+          customers={customers}
+          quickIds={quickCustomerIds}
+          value={partnerId}
+          onChange={setPartnerId}
+          newCustomerHref="/customers/new?return=%2Forders"
+          inputClass={inputClass}
+        />
         <div className="flex flex-col gap-1 w-full sm:w-auto">
           <label className="text-xs font-medium text-slate-500">วันที่สั่ง</label>
           <DateInput
