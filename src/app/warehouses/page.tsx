@@ -1,8 +1,9 @@
 export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
-import { createWarehouse, deleteWarehouse, setWarehouseActive, setWarehouseLocation } from "./actions";
+import { createWarehouse, deleteWarehouse, setWarehouseActive } from "./actions";
+import { WarehouseLocationForm } from "./location-form";
 import { getStockSnapshot } from "@/lib/stock";
-import { Warehouse, Trash2, Plus, Power, MapPin } from "lucide-react";
+import { Warehouse, Trash2, Plus, Power } from "lucide-react";
 
 export default async function WarehousesPage() {
   const [warehouses, snapshot] = await Promise.all([
@@ -104,23 +105,7 @@ export default async function WarehousesPage() {
                   ปิดได้ แต่ยังมียอดติดลบ ควรแก้ด้วยใบรับเข้า/โอนย้ายก่อน
                 </div>
               )}
-              <form action={setWarehouseLocation.bind(null, w.id)} className="space-y-1.5">
-                <label className="flex items-center gap-1 text-xs font-medium text-slate-500">
-                  <MapPin className="size-3.5" /> พิกัดคลัง (ใช้เรียงงานคนขับจากใกล้ไปไกล)
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    name="location"
-                    defaultValue={w.latitude != null && w.longitude != null ? `${w.latitude}, ${w.longitude}` : ""}
-                    placeholder="วางลิงก์ Google Maps หรือ 13.75, 100.50"
-                    className="flex-1 min-w-0 border border-slate-300 rounded-lg px-3 py-2 min-h-[44px] text-sm text-black focus:outline-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400"
-                  />
-                  <button className="min-h-[44px] px-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm touch-manipulation active:opacity-80">
-                    บันทึก
-                  </button>
-                </div>
-                {w.latitude == null && <div className="text-xs text-amber-700">ยังไม่ได้ตั้งพิกัด หน้าคนขับจะไม่เรียงตามระยะ</div>}
-              </form>
+              <WarehouseLocationForm id={w.id} latitude={w.latitude} longitude={w.longitude} />
               <form action={setWarehouseActive.bind(null, w.id, !w.isActive)}>
                 <button
                   disabled={w.isActive && stock.positive > 0}

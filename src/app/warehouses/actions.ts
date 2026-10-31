@@ -47,16 +47,24 @@ export async function deleteWarehouse(id: string) {
   revalidatePath("/stock-counts");
 }
 
+export type LocationState = { ok: boolean; message: string } | null;
+
 // ตั้งพิกัดคลังจากลิงก์ Google Maps หรือ "lat, lng" ช่องว่าง = ล้างพิกัด
-export async function setWarehouseLocation(id: string, formData: FormData) {
-  if (!(await isAdmin())) return;
+export async function setWarehouseLocation(id: string, _prev: LocationState, formData: FormData): Promise<LocationState> {
+  if (!(await isAdmin())) return { ok: false, message: "เฉพาะ admin เท่านั้นที่ตั้งพิกัดคลังได้" };
   const text = String(formData.get("location") ?? "").trim();
   const coords = text ? await coordsFromMapLink(text) : null;
-  if (text && !coords) return;
+  if (text && !coords) {
+    return {
+      ok: false,
+      message: "อ่านพิกัดจากข้อความนี้ไม่ได้ ลองวางลิงก์ Google Maps เต็ม หรือพิมพ์เลขพิกัด เช่น 13.7563, 100.5018",
+    };
+  }
   await prisma.warehouse.update({
     where: { id },
     data: { latitude: coords?.latitude ?? null, longitude: coords?.longitude ?? null },
   });
   revalidatePath("/warehouses");
   revalidatePath("/driver");
+  return { ok: true, message: coords ? "บันทึกพิกัดคลังแล้ว" : "ล้างพิกัดคลังแล้ว" };
 }
