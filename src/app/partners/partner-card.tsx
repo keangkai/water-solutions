@@ -73,6 +73,15 @@ export function PartnerCard({
               <MapPin className="size-3.5 shrink-0" /> <span className="whitespace-pre-line wrap-anywhere min-w-0"><LinkifiedText text={partner.address} /></span>
             </div>
           )}
+          {(partner.address2 || partner.mapUrl2) && (
+            <div className="flex items-start gap-1.5">
+              <MapPin className="size-3.5 shrink-0 mt-1" />
+              <span className="whitespace-pre-line wrap-anywhere min-w-0">
+                <b className="text-slate-600">{partner.address2Label ?? "ที่อยู่ที่ 2"}:</b>{" "}
+                {partner.address2 ? <LinkifiedText text={partner.address2} /> : <span className="text-slate-400">ใช้หมุดแผนที่</span>}
+              </span>
+            </div>
+          )}
           {partner.mapUrl && (
             <a
               href={partner.mapUrl}

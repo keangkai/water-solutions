@@ -9,6 +9,7 @@ import { LinkifiedText } from "@/components/linkified-text";
 import { orderStatusInfo, roundLabel, type OrderStatus } from "@/lib/delivery";
 import { facebookNameIfDifferent } from "@/lib/customer-labels";
 import { BlacklistBadge } from "@/components/blacklist-badge";
+import { resolveDeliveryAddress } from "@/lib/delivery-address";
 
 export type OrderCardData = {
   id: string;
@@ -18,12 +19,29 @@ export type OrderCardData = {
   deliveryDate: Date;
   deliveryRound: string;
   deliveryAddress: string | null;
+  useSecondAddress: boolean;
   note: string | null;
   status: OrderStatus;
   issueReason: string | null;
   deliveredAt: Date | null;
   paidAt: Date | null;
-  partner: { name: string; companyName: string | null; facebookName: string | null; phone: string | null; address: string | null; isBlacklisted: boolean; blacklistReason: string | null };
+  partner: {
+    name: string;
+    companyName: string | null;
+    facebookName: string | null;
+    phone: string | null;
+    address: string | null;
+    mapUrl: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    address2: string | null;
+    address2Label: string | null;
+    mapUrl2: string | null;
+    latitude2: number | null;
+    longitude2: number | null;
+    isBlacklisted: boolean;
+    blacklistReason: string | null;
+  };
   warehouse: { name: string };
   lines: {
     id: string;
@@ -91,7 +109,7 @@ export function OrderCard({
     (sum, l) => sum + (isDelivered ? (l.deliveredQuantity ?? l.quantity) : l.quantity) * l.unitPrice,
     0
   );
-  const address = order.deliveryAddress ?? order.partner.address;
+  const { address, label: addressLabel } = resolveDeliveryAddress(order, order.partner);
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col gap-3">
@@ -131,7 +149,14 @@ export function OrderCard({
         <div className="flex items-start gap-1.5">
           <MapPin className="size-3.5 shrink-0 mt-1 text-slate-400" />
           {address ? (
-            <span className="whitespace-pre-line wrap-anywhere min-w-0"><LinkifiedText text={address} /></span>
+            <span className="whitespace-pre-line wrap-anywhere min-w-0">
+              {addressLabel && (
+                <span className="mr-1.5 text-xs font-medium px-2 py-0.5 rounded-full border bg-violet-50 text-violet-700 border-violet-200">
+                  ส่งที่: {addressLabel}
+                </span>
+              )}
+              <LinkifiedText text={address} />
+            </span>
           ) : (
             <span className="text-amber-700">ยังไม่มีที่อยู่</span>
           )}

@@ -8,6 +8,7 @@ import { DELIVERY_ROUNDS, roundLabel, shiftDateKey, todayInBangkok } from "@/lib
 import { DriverOrderCard, type DriverOrder } from "./driver-order-card";
 import { Truck, ChevronLeft, ChevronRight, LogOut, Package, ClipboardList } from "lucide-react";
 import { sortByDistance } from "@/lib/route-order";
+import { resolveDeliveryAddress } from "@/lib/delivery-address";
 import { facebookNameIfDifferent } from "@/lib/customer-labels";
 
 const datePattern = /^\d{4}-\d{2}-\d{2}$/;
@@ -69,12 +70,10 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
     facebookName: facebookNameIfDifferent(o.partner.name, o.partner.facebookName),
     blacklistReason: o.partner.isBlacklisted ? o.partner.blacklistReason ?? "บัญชีดำ" : null,
     phone: o.partner.phone,
-    address: o.deliveryAddress ?? o.partner.address,
-    coords:
-      !o.deliveryAddress && o.partner.latitude != null && o.partner.longitude != null
-        ? { latitude: o.partner.latitude, longitude: o.partner.longitude }
-        : null,
-    mapUrl: o.deliveryAddress ? null : o.partner.mapUrl,
+    address: resolveDeliveryAddress(o, o.partner).address,
+    addressLabel: resolveDeliveryAddress(o, o.partner).label,
+    coords: resolveDeliveryAddress(o, o.partner).coords,
+    mapUrl: resolveDeliveryAddress(o, o.partner).mapUrl,
     note: o.note,
     issueReason: o.issueReason,
     total: o.lines.reduce(
@@ -104,7 +103,7 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
       const byDistance = sortByDistance(
         roundOrders,
         (o) => (o.warehouse.latitude != null && o.warehouse.longitude != null ? { latitude: o.warehouse.latitude, longitude: o.warehouse.longitude } : null),
-        (o) => (!o.deliveryAddress && o.partner.latitude != null && o.partner.longitude != null ? { latitude: o.partner.latitude, longitude: o.partner.longitude } : null)
+        (o) => resolveDeliveryAddress(o, o.partner).coords
       );
       byDistance.sort((a, b) => Number(a.status !== "CONFIRMED") - Number(b.status !== "CONFIRMED"));
       return {

@@ -6,6 +6,7 @@ import { createOrder, updateOrder } from "./actions";
 import { DELIVERY_ROUNDS } from "@/lib/delivery";
 import { DateInput } from "@/components/date-input";
 import { CustomerPicker } from "@/components/customer-picker";
+import { hasSecondAddress } from "@/lib/delivery-address";
 
 export type OrderProduct = { id: string; name: string; unit: string; defaultSellPrice: number | null };
 export type OrderCustomer = {
@@ -18,6 +19,9 @@ export type OrderCustomer = {
   recentIncidents: number; // ยกเลิก/ติดต่อไม่ได้ ในช่วงล่าสุด
   phone: string | null;
   address: string | null;
+  address2: string | null;
+  address2Label: string | null;
+  mapUrl2: string | null;
   zone: string | null;
 };
 export type OrderWarehouse = { id: string; name: string };
@@ -29,6 +33,7 @@ export type InitialOrder = {
   deliveryDate: Date;
   deliveryRound: string;
   deliveryAddress: string | null;
+  useSecondAddress: boolean;
   note: string | null;
   lines: { productId: string; quantity: number; unitPrice: number }[];
 };
@@ -72,6 +77,8 @@ export function OrderForm({
   );
 
   const customer = customers.find((c) => c.id === partnerId);
+  const [addressChoice, setAddressChoice] = useState<"1" | "2">(initialOrder?.useSecondAddress ? "2" : "1");
+  const secondAddress = customer ? hasSecondAddress(customer) : false;
   const total = rows.reduce((sum, r) => sum + (Number(r.quantity) || 0) * (Number(r.unitPrice) || 0), 0);
   const totalQty = rows.reduce((sum, r) => sum + (Number(r.quantity) || 0), 0);
 
@@ -94,7 +101,10 @@ export function OrderForm({
           customers={customers}
           quickIds={quickCustomerIds}
           value={partnerId}
-          onChange={setPartnerId}
+          onChange={(id) => {
+            setPartnerId(id);
+            setAddressChoice("1");
+          }}
           newCustomerHref="/customers/new?return=%2Forders"
           inputClass={inputClass}
         />
@@ -161,14 +171,48 @@ export function OrderForm({
         </div>
       )}
 
+      {customer && secondAddress && (
+        <fieldset className="space-y-2">
+          <legend className="text-xs font-medium text-slate-500">ส่งที่ไหน (ลูกค้ารายนี้มีสองที่อยู่)</legend>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {(
+              [
+                { value: "1", title: "ที่อยู่หลัก", text: customer.address },
+                { value: "2", title: customer.address2Label ?? "ที่อยู่ที่ 2", text: customer.address2 },
+              ] as const
+            ).map((opt) => (
+              <label
+                key={opt.value}
+                className={`flex items-start gap-2 rounded-lg border px-3 py-2 min-h-[44px] cursor-pointer touch-manipulation ${
+                  addressChoice === opt.value ? "border-sky-400 bg-sky-50" : "border-slate-300 bg-white"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="addressChoice"
+                  value={opt.value}
+                  checked={addressChoice === opt.value}
+                  onChange={() => setAddressChoice(opt.value)}
+                  className="mt-1 size-4"
+                />
+                <span className="min-w-0 text-sm">
+                  <span className="font-medium text-slate-900">{opt.title}</span>
+                  <span className="block text-xs text-slate-500 break-words line-clamp-2">{opt.text ?? "ยังไม่มีที่อยู่ (ใช้หมุดแผนที่)"}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="flex flex-col gap-1">
-          <label className="text-xs font-medium text-slate-500">ที่อยู่จัดส่ง (เว้นว่าง = ใช้ที่อยู่ลูกค้า)</label>
+          <label className="text-xs font-medium text-slate-500">ที่อยู่จัดส่ง (เว้นว่าง = ใช้ที่อยู่ที่เลือกด้านบน/ที่อยู่ลูกค้า)</label>
           <textarea
             name="deliveryAddress"
             rows={2}
             defaultValue={initialOrder?.deliveryAddress ?? ""}
-            placeholder={customer?.address ?? "ลูกค้ารายนี้ยังไม่มีที่อยู่ กรอกที่อยู่จัดส่งที่นี่"}
+            placeholder={(addressChoice === "2" && secondAddress ? customer?.address2 : customer?.address) ?? "ลูกค้ารายนี้ยังไม่มีที่อยู่ กรอกที่อยู่จัดส่งที่นี่"}
             className={inputClass}
           />
         </div>

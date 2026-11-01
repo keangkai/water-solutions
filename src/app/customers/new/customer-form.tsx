@@ -65,6 +65,21 @@ export function CustomerForm({ sources, zones, returnTo }: { sources: Source[]; 
         </label>
       </Section>
 
+      <Section title="ที่อยู่ที่ 2 (ถ้าลูกค้าส่งสองที่)">
+        <label className="flex flex-col gap-1.5">
+          <span className={label}>ชื่อเรียก</span>
+          <input name="address2Label" autoComplete="off" placeholder="เช่น ร้าน, ที่ทำงาน" className={field} />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className={label}>ที่อยู่ที่ 2</span>
+          <textarea name="address2" rows={3} className={`${field} py-2.5`} />
+        </label>
+        <label className="flex flex-col gap-1.5">
+          <span className={label}>หมุดแผนที่ของที่อยู่ที่ 2</span>
+          <input name="mapUrl2" type="url" inputMode="url" autoComplete="off" placeholder="https://maps.app.goo.gl/..." className={field} />
+        </label>
+      </Section>
+
       <Section title="จัดกลุ่ม (ไม่บังคับ)">
         <label className="flex flex-col gap-1.5">
           <span className={label}>ประเภทลูกค้า</span>
