@@ -83,6 +83,15 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               <span className="whitespace-pre-line wrap-anywhere"><LinkifiedText text={customer.address} /></span>
             </div>
           )}
+          {(customer.address2 || customer.mapUrl2) && (
+            <div className="flex items-start gap-1.5">
+              <MapPin className="size-3.5 mt-0.5 shrink-0" />
+              <span className="whitespace-pre-line wrap-anywhere">
+                <b className="text-slate-600">{customer.address2Label ?? "ที่อยู่ที่ 2"}:</b>{" "}
+                {customer.address2 ? <LinkifiedText text={customer.address2} /> : <span className="text-slate-400">ใช้หมุดแผนที่</span>}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 

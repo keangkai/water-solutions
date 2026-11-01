@@ -15,6 +15,7 @@ export type DriverOrder = {
   blacklistReason: string | null; // มีค่า = ลูกค้าอยู่ในบัญชีดำ
   phone: string | null;
   address: string | null;
+  addressLabel: string | null; // ลูกค้าที่ส่งสองที่: ส่งที่ไหน (ที่อยู่ที่ 2)
   coords: { latitude: number; longitude: number } | null;
   mapUrl: string | null; // ลิงก์แผนที่ที่ลูกค้าส่งมา (ถ้ามี) เปิดตรงจุดและเข้าแอป Google Maps ได้
   note: string | null;
@@ -90,7 +91,14 @@ export function DriverOrderCard({ order }: { order: DriverOrder }) {
           <div className="flex items-start gap-2 text-slate-700 min-w-0">
             <MapPin className="size-4 shrink-0 mt-0.5 text-slate-400" />
             {order.address ? (
-              <span className="whitespace-pre-line wrap-anywhere"><LinkifiedText text={order.address} /></span>
+              <span className="whitespace-pre-line wrap-anywhere">
+                {order.addressLabel && (
+                  <span className="mr-1.5 text-xs font-medium px-2 py-0.5 rounded-full border bg-violet-50 text-violet-700 border-violet-200">
+                    ส่งที่: {order.addressLabel}
+                  </span>
+                )}
+                <LinkifiedText text={order.address} />
+              </span>
             ) : (
               <span className="text-amber-700 text-sm">ไม่มีที่อยู่ โทรถามลูกค้า</span>
             )}

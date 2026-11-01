@@ -16,6 +16,11 @@ export type PartnerValues = {
   mapUrl: string | null;
   latitude: number | null;
   longitude: number | null;
+  address2Label: string | null;
+  address2: string | null;
+  mapUrl2: string | null;
+  latitude2: number | null;
+  longitude2: number | null;
 };
 export type SourceOption = { id: string; name: string; isActive: boolean };
 
@@ -130,6 +135,41 @@ export function PartnerFields({
             </span>
           )}
         </div>
+      )}
+      {type === "CUSTOMER" && (
+        <details className="w-full border border-slate-200 rounded-lg px-3 py-2" open={!!(partner?.address2 || partner?.mapUrl2)}>
+          <summary className="text-sm font-medium text-slate-600 cursor-pointer min-h-[44px] flex items-center">
+            ที่อยู่ที่ 2 (ลูกค้าที่ส่งสองที่)
+          </summary>
+          <div className="space-y-3 pb-2">
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-500">ชื่อเรียกที่อยู่ที่ 2</label>
+              <input name="address2Label" defaultValue={partner?.address2Label ?? ""} placeholder="เช่น ร้าน, ที่ทำงาน" className={inputClass} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-500">ที่อยู่ที่ 2</label>
+              <textarea name="address2" rows={2} defaultValue={partner?.address2 ?? ""} className={inputClass} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-xs font-medium text-slate-500">หมุดแผนที่ของที่อยู่ที่ 2</label>
+              <input
+                name="mapUrl2"
+                type="url"
+                inputMode="url"
+                defaultValue={partner?.mapUrl2 ?? ""}
+                placeholder="https://maps.app.goo.gl/..."
+                className={inputClass}
+              />
+              {partner?.mapUrl2 && (
+                <span className={`text-xs ${partner.latitude2 != null ? "text-emerald-600" : "text-amber-600"}`}>
+                  {partner.latitude2 != null
+                    ? `บันทึกพิกัดแล้ว ${partner.latitude2.toFixed(5)}, ${partner.longitude2?.toFixed(5)}`
+                    : "อ่านพิกัดจากลิงก์นี้ไม่ได้ ลองใช้ลิงก์จากปุ่มแชร์ใน Google Maps"}
+                </span>
+              )}
+            </div>
+          </div>
+        </details>
       )}
     </>
   );

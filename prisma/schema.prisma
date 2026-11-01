@@ -93,6 +93,11 @@ model Partner {
   mapUrl          String? // ลิงก์ Google Maps ที่ลูกค้าส่งมา
   latitude        Float? // พิกัดที่ดึงจากลิงก์ ใช้วิเคราะห์โซนและนำทาง
   longitude       Float?
+  address2Label   String? // ชื่อเรียกที่อยู่ที่ 2 เช่น ร้าน, ที่ทำงาน
+  address2        String? // ลูกค้าที่ส่งสองที่ ที่อยู่ที่ 2 พร้อมลิงก์แผนที่/พิกัดของตัวเอง
+  mapUrl2         String?
+  latitude2       Float?
+  longitude2      Float?
   segment         CustomerSegment? // ประเภทลูกค้า ใช้กับ CUSTOMER เท่านั้น
   zone            String? // โซน/ตำบล แยกจากที่อยู่เพื่อใช้จัดกลุ่มในรายงาน
   source          CustomerSource?    @relation(fields: [sourceId], references: [id])
@@ -154,6 +159,7 @@ model Order {
   deliveryDate    DateTime
   deliveryRound   String // คีย์รอบจัดส่ง เช่น "08-10" ดูรายการใน lib/delivery.ts
   deliveryAddress String? // ที่อยู่เฉพาะออเดอร์นี้ ว่าง = ใช้ที่อยู่ลูกค้า
+  useSecondAddress Boolean @default(false) // ส่งที่อยู่ที่ 2 ของลูกค้า (ใช้เมื่อไม่ได้กรอก deliveryAddress)
   note            String? // หมายเหตุถึงคนขับ
   status          OrderStatus        @default(CONFIRMED)
   issueReason     String? // เหตุผลที่ส่งไม่ครบหรือส่งไม่ได้ เช่น แพ็คน้ำแตก

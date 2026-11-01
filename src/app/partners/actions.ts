@@ -26,6 +26,11 @@ async function parsePartner(formData: FormData) {
   const facebookName = isCustomer ? String(formData.get("facebookName") ?? "").trim() || null : null;
   const mapUrl = isCustomer ? String(formData.get("mapUrl") ?? "").trim() || null : null;
   const coords = mapUrl ? await coordsFromMapLink(mapUrl) : null;
+  // ที่อยู่ที่ 2 สำหรับลูกค้าที่ส่งสองที่
+  const address2 = isCustomer ? String(formData.get("address2") ?? "").trim() || null : null;
+  const address2Label = isCustomer ? String(formData.get("address2Label") ?? "").trim() || null : null;
+  const mapUrl2 = isCustomer ? String(formData.get("mapUrl2") ?? "").trim() || null : null;
+  const coords2 = mapUrl2 ? await coordsFromMapLink(mapUrl2) : null;
 
   return {
     name,
@@ -40,6 +45,11 @@ async function parsePartner(formData: FormData) {
     mapUrl,
     latitude: coords?.latitude ?? null,
     longitude: coords?.longitude ?? null,
+    address2,
+    address2Label,
+    mapUrl2,
+    latitude2: coords2?.latitude ?? null,
+    longitude2: coords2?.longitude ?? null,
   };
 }
 

@@ -22,6 +22,7 @@ function parseOrder(formData: FormData) {
   const orderDateRaw = String(formData.get("orderDate") ?? "").trim();
   const deliveryRound = String(formData.get("deliveryRound") ?? "");
   const deliveryAddress = String(formData.get("deliveryAddress") ?? "").trim() || null;
+  const useSecondAddress = formData.get("addressChoice") === "2";
   const note = String(formData.get("note") ?? "").trim() || null;
   const lines = parseLines(formData);
 
@@ -36,6 +37,7 @@ function parseOrder(formData: FormData) {
       deliveryDate: new Date(deliveryDate),
       deliveryRound,
       deliveryAddress,
+      useSecondAddress,
       note,
     },
     lines,
