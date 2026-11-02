@@ -8,7 +8,7 @@ import { bkkDay } from "@/lib/report-period";
 import { warehouseOptionsFor } from "@/lib/warehouses";
 import { AddedBanner } from "@/components/added-banner";
 import { recentIncidentCounts } from "@/lib/incidents";
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardCheck, ClipboardPaste } from "lucide-react";
 
 const tabs = {
   pending: { label: "รอส่ง / ส่งไม่ได้", empty: "ไม่มีออเดอร์รอส่ง" },
@@ -94,9 +94,17 @@ export default async function OrdersPage({
       <div className="flex items-center gap-2">
         <ClipboardCheck className="size-5 text-sky-500" />
         <h1 className="text-xl font-semibold text-slate-900">ออเดอร์</h1>
-        <Link href="/orders/import" className="ml-auto text-sm text-sky-600 hover:text-sky-700 min-h-[44px] inline-flex items-center">
-          นำเข้าจาก Excel
-        </Link>
+        <div className="ml-auto flex items-center gap-1">
+          <Link
+            href="/orders/paste"
+            className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg border border-sky-300 text-sm font-medium text-sky-700 hover:bg-sky-50 touch-manipulation active:scale-95"
+          >
+            <ClipboardPaste className="size-4" /> วางข้อความจากไลน์
+          </Link>
+          <Link href="/orders/import" className="text-sm text-sky-600 hover:text-sky-700 min-h-[44px] px-2 inline-flex items-center">
+            นำเข้าจาก Excel
+          </Link>
+        </div>
       </div>
 
       {justAdded && params.added === "1" && <AddedBanner name={justAdded.name} hint="เลือกไว้ให้ในฟอร์มออเดอร์แล้ว" />}

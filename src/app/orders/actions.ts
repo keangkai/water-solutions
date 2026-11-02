@@ -45,21 +45,22 @@ function parseOrder(formData: FormData) {
 }
 
 export async function createOrder(formData: FormData) {
-  if ((await currentRole()) !== "admin") return;
+  if ((await currentRole()) !== "admin") return false;
   const parsed = parseOrder(formData);
-  if (!parsed) return;
-  if (!(await warehouseUsable(parsed.data.warehouseId))) return;
+  if (!parsed) return false;
+  if (!(await warehouseUsable(parsed.data.warehouseId))) return false;
   // ลูกค้าบัญชีดำ: ต้องยืนยันจึงจะสร้างออเดอร์ได้ (กันกดพลาด ไม่ใช่การห้ามเด็ดขาด)
   const partner = await prisma.partner.findUnique({ where: { id: parsed.data.partnerId }, select: { isBlacklisted: true } });
-  if (partner?.isBlacklisted && formData.get("confirmBlacklisted") !== "1") return;
+  if (partner?.isBlacklisted && formData.get("confirmBlacklisted") !== "1") return false;
   // วันส่งย้อนหลังได้ไม่เกิน BACKDATE_DAYS วัน (แก้ไข/เลื่อนวันของออเดอร์เดิมไม่ติดเงื่อนไขนี้)
-  if (parsed.data.deliveryDate.toISOString().slice(0, 10) < earliestDeliveryDate()) return;
+  if (parsed.data.deliveryDate.toISOString().slice(0, 10) < earliestDeliveryDate()) return false;
 
   await prisma.order.create({
     data: { ...parsed.data, lines: { create: parsed.lines } },
   });
 
   revalidateOrderPaths();
+  return true; // false = ไม่ได้บันทึก (ไม่ผ่านเงื่อนไข) ให้หน้าจอไม่แจ้งว่าสำเร็จ
 }
 
 // แก้ไขหรือเลื่อนวันส่ง ใช้ได้กับออเดอร์ที่ยังไม่ได้ส่ง และส่งกลับไปเป็นรอส่งอีกครั้ง
