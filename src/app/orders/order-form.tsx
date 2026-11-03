@@ -19,6 +19,7 @@ export type OrderCustomer = {
   recentIncidents: number; // ยกเลิก/ติดต่อไม่ได้ ในช่วงล่าสุด
   phone: string | null;
   address: string | null;
+  mapUrl: string | null;
   address2: string | null;
   address2Label: string | null;
   mapUrl2: string | null;
@@ -37,6 +38,14 @@ export type InitialOrder = {
   note: string | null;
   lines: { productId: string; quantity: number; unitPrice: number }[];
 };
+// ค่าตั้งต้นของฟอร์มออเดอร์ใหม่ (เช่น อ่านมาจากข้อความไลน์) ผู้ใช้ตรวจแก้ได้ก่อนบันทึก
+export type OrderPrefill = {
+  deliveryDate?: string | null;
+  deliveryRound?: string | null;
+  deliveryAddress?: string | null;
+  note?: string | null;
+  lines?: { productId: string; quantity: number; unitPrice: number }[];
+};
 type LineRow = { productId: string; quantity: string; unitPrice: string };
 
 const inputClass =
@@ -54,8 +63,10 @@ export function OrderForm({
   minDeliveryDate,
   defaultCustomerId,
   quickCustomerIds = [],
+  prefill,
   initialOrder,
   onDone,
+  onSaved,
 }: {
   customers: OrderCustomer[];
   products: OrderProduct[];
@@ -64,8 +75,10 @@ export function OrderForm({
   minDeliveryDate?: string; // วันส่งที่เก่าสุดสำหรับออเดอร์ใหม่ กำหนดโดย server
   defaultCustomerId?: string; // เลือกลูกค้าไว้ให้ (เช่น เพิ่งเพิ่มลูกค้าใหม่มา)
   quickCustomerIds?: string[]; // ลูกค้าที่สั่งบ่อย/ล่าสุด server เรียงให้แล้ว
+  prefill?: OrderPrefill;
   initialOrder?: InitialOrder;
   onDone?: () => void;
+  onSaved?: () => void; // ออเดอร์ใหม่บันทึกสำเร็จ (ไม่เรียกถ้าไม่ผ่านเงื่อนไขของ server)
 }) {
   const isEdit = !!initialOrder;
   const emptyRow = (): LineRow => ({ productId: products[0]?.id ?? "", quantity: "", unitPrice: defaultPrice(products[0]) });
@@ -73,7 +86,9 @@ export function OrderForm({
   const [rows, setRows] = useState<LineRow[]>(
     initialOrder
       ? initialOrder.lines.map((l) => ({ productId: l.productId, quantity: String(l.quantity), unitPrice: String(l.unitPrice) }))
-      : [emptyRow()]
+      : prefill?.lines && prefill.lines.length > 0
+        ? prefill.lines.map((l) => ({ productId: l.productId, quantity: String(l.quantity), unitPrice: String(l.unitPrice) }))
+        : [emptyRow()]
   );
 
   const customer = customers.find((c) => c.id === partnerId);
@@ -90,9 +105,12 @@ export function OrderForm({
   return (
     <form
       action={async (formData) => {
-        await action(formData);
+        const saved = await action(formData);
         if (isEdit) onDone?.();
-        else setRows([emptyRow()]);
+        else {
+          setRows([emptyRow()]);
+          if (saved !== false) onSaved?.();
+        }
       }}
       className={`border rounded-xl p-5 shadow-sm space-y-4 ${isEdit ? "bg-sky-50/40 border-sky-200" : "bg-white border-slate-200"}`}
     >
@@ -121,13 +139,13 @@ export function OrderForm({
           <DateInput
             name="deliveryDate"
             min={isEdit ? undefined : minDeliveryDate}
-            defaultValue={initialOrder ? initialOrder.deliveryDate.toISOString().slice(0, 10) : today}
+            defaultValue={initialOrder ? initialOrder.deliveryDate.toISOString().slice(0, 10) : (prefill?.deliveryDate ?? today)}
             className={inputClass}
           />
         </div>
         <div className="flex flex-col gap-1 w-full sm:w-auto">
           <label className="text-xs font-medium text-slate-500">รอบจัดส่ง</label>
-          <select name="deliveryRound" required defaultValue={initialOrder?.deliveryRound} className={inputClass}>
+          <select name="deliveryRound" required defaultValue={initialOrder?.deliveryRound ?? prefill?.deliveryRound ?? undefined} className={inputClass}>
             {DELIVERY_ROUNDS.map((r) => (
               <option key={r.key} value={r.key}>
                 {r.label}
@@ -211,7 +229,7 @@ export function OrderForm({
           <textarea
             name="deliveryAddress"
             rows={2}
-            defaultValue={initialOrder?.deliveryAddress ?? ""}
+            defaultValue={initialOrder?.deliveryAddress ?? prefill?.deliveryAddress ?? ""}
             placeholder={(addressChoice === "2" && secondAddress ? customer?.address2 : customer?.address) ?? "ลูกค้ารายนี้ยังไม่มีที่อยู่ กรอกที่อยู่จัดส่งที่นี่"}
             className={inputClass}
           />
@@ -221,7 +239,7 @@ export function OrderForm({
           <textarea
             name="note"
             rows={2}
-            defaultValue={initialOrder?.note ?? ""}
+            defaultValue={initialOrder?.note ?? prefill?.note ?? ""}
             placeholder="เช่น วางหน้าบ้าน, โทรก่อนถึง"
             className={inputClass}
           />
