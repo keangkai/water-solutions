@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format-date";
 import { segmentLabel } from "@/lib/customer-labels";
 import { behaviorInfo, behaviorOrder, classifyBehavior, type BehaviorStatus } from "@/lib/customer-behavior";
-import { UserSearch, Users, ShoppingBag, Wallet } from "lucide-react";
+import { UserSearch, UserMinus, Users, ShoppingBag, Wallet } from "lucide-react";
 import { LinkifiedText } from "@/components/linkified-text";
 
 const sortOptions = { total: "ยอดซื้อสูงสุด", recent: "ซื้อล่าสุด", orders: "สั่งบ่อยสุด" } as const;
@@ -120,6 +120,12 @@ export default async function CustomersPage({
       <div className="flex items-center gap-2">
         <UserSearch className="size-5 text-sky-500" />
         <h1 className="text-xl font-semibold text-slate-900">วิเคราะห์ลูกค้า</h1>
+        <Link
+          href="/customers/lapsed"
+          className="ml-auto inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg border border-sky-300 text-sm font-medium text-sky-700 hover:bg-sky-50 touch-manipulation active:scale-95"
+        >
+          <UserMinus className="size-4" /> ลูกค้าที่หายไป
+        </Link>
       </div>
 
       <form className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm flex flex-wrap gap-3 items-end">
