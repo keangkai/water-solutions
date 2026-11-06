@@ -1,13 +1,11 @@
 export const dynamic = "force-dynamic";
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
 import { formatDate } from "@/lib/format-date";
 import { behaviorInfo } from "@/lib/customer-behavior";
-import { buildLapsedCustomers, lapsedStatuses, type LapsedStatus } from "@/lib/lapsed-customers";
-import { UserMinus, Phone, ArrowLeft } from "lucide-react";
-
-const sortOptions = { value: "ยอดซื้อสะสมสูงสุด", overdue: "เลยรอบนานสุด", recent: "ซื้อล่าสุด" } as const;
-type SortKey = keyof typeof sortOptions;
+import { lapsedStatuses, type LapsedStatus } from "@/lib/lapsed-customers";
+import { filterAndSortLapsed, loadLapsedCustomers, lapsedSortOptions, parseLapsedSort, parseLapsedStatus, type LapsedSortKey } from "@/lib/lapsed-query";
+import { CopyMessageButton, TemplateEditor } from "./message-tools";
+import { UserMinus, Phone, ArrowLeft, Download } from "lucide-react";
 
 export default async function LapsedCustomersPage({
   searchParams,
@@ -15,51 +13,17 @@ export default async function LapsedCustomersPage({
   searchParams: Promise<{ sort?: string; status?: string }>;
 }) {
   const params = await searchParams;
-  const sort: SortKey = params.sort && params.sort in sortOptions ? (params.sort as SortKey) : "value";
-  const status = lapsedStatuses.find((s) => s === params.status) ?? null;
+  const sort = parseLapsedSort(params.sort);
+  const status = parseLapsedStatus(params.status);
 
-  const partners = await prisma.partner.findMany({
-    where: { type: "CUSTOMER", movements: { some: { type: "OUT" } } },
-    select: {
-      id: true,
-      name: true,
-      phone: true,
-      zone: true,
-      isBlacklisted: true,
-      orders: { where: { status: { in: ["CONFIRMED", "FAILED"] } }, select: { id: true }, take: 1 },
-      movements: {
-        where: { type: "OUT" },
-        select: { date: true, lines: { select: { quantity: true, unitPrice: true, product: { select: { name: true } } } } },
-      },
-    },
-  });
-
-  const all = buildLapsedCustomers(
-    partners.map((p) => ({
-      id: p.id,
-      name: p.name,
-      phone: p.phone,
-      zone: p.zone,
-      isBlacklisted: p.isBlacklisted,
-      hasPendingOrder: p.orders.length > 0,
-      movements: p.movements.map((m) => ({
-        date: m.date,
-        lines: m.lines.map((l) => ({ productName: l.product.name, quantity: l.quantity, unitPrice: l.unitPrice })),
-      })),
-    }))
-  );
-
-  const counts = new Map<LapsedStatus, number>(lapsedStatuses.map((s) => [s, all.filter((c) => c.status === s).length]));
-  const shown = (status ? all.filter((c) => c.status === status) : all).sort((a, b) => {
-    if (sort === "overdue") return (b.daysOverdue ?? -1) - (a.daysOverdue ?? -1) || b.total - a.total;
-    if (sort === "recent") return b.lastDate.getTime() - a.lastDate.getTime();
-    return b.total - a.total;
-  });
+  const all = await loadLapsedCustomers();
+  const counts = new Map<LapsedStatus, number>(lapsedStatuses.map((st) => [st, all.filter((c) => c.status === st).length]));
+  const shown = filterAndSortLapsed(all, status, sort);
 
   const callable = all.filter((c) => !c.isBlacklisted);
   const lostPerMonth = callable.reduce((sum, c) => sum + (c.monthlyValue ?? 0), 0);
 
-  const href = (next: { sort?: SortKey; status?: LapsedStatus | null }) => {
+  const href = (next: { sort?: LapsedSortKey; status?: LapsedStatus | null }) => {
     const q = new URLSearchParams({ sort: next.sort ?? sort });
     const s = next.status === undefined ? status : next.status;
     if (s) q.set("status", s);
@@ -78,6 +42,8 @@ export default async function LapsedCustomersPage({
           <ArrowLeft className="size-4" /> วิเคราะห์ลูกค้า
         </Link>
       </div>
+
+      <TemplateEditor />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm">
@@ -115,8 +81,14 @@ export default async function LapsedCustomersPage({
             </Link>
           ))}
         </div>
-        <div className="flex gap-1">
-          {(Object.keys(sortOptions) as SortKey[]).map((key) => (
+        <div className="flex flex-wrap gap-1">
+          <a
+            href={`/customers/lapsed/export?${new URLSearchParams({ sort, ...(status ? { status } : {}) })}`}
+            className="px-3 min-h-[44px] inline-flex items-center gap-1.5 rounded-lg text-xs border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 touch-manipulation active:scale-95"
+          >
+            <Download className="size-3.5" /> ส่งออก CSV
+          </a>
+          {(Object.keys(lapsedSortOptions) as LapsedSortKey[]).map((key) => (
             <Link
               key={key}
               href={href({ sort: key })}
@@ -124,7 +96,7 @@ export default async function LapsedCustomersPage({
                 sort === key ? "bg-sky-50 text-sky-700 border-sky-200 font-medium" : "bg-white text-slate-500 border-slate-200 hover:text-slate-900"
               }`}
             >
-              {sortOptions[key]}
+              {lapsedSortOptions[key]}
             </Link>
           ))}
         </div>
@@ -164,16 +136,19 @@ export default async function LapsedCustomersPage({
               ซื้อมา {c.orders.toLocaleString()} ครั้ง · ยอดสะสม {c.total.toLocaleString()} บาท
               {c.monthlyValue != null && ` · ประมาณ ${c.monthlyValue.toLocaleString()} บาท/เดือน`}
             </div>
-            {c.phone ? (
-              <a
-                href={`tel:${c.phone}`}
-                className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg border border-sky-300 text-sm font-medium text-sky-700 hover:bg-sky-50 touch-manipulation active:scale-95"
-              >
-                <Phone className="size-4" /> {c.phone}
-              </a>
-            ) : (
-              <div className="text-xs text-slate-400">ไม่มีเบอร์โทร</div>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {c.phone ? (
+                <a
+                  href={`tel:${c.phone}`}
+                  className="inline-flex items-center gap-1.5 min-h-[44px] px-3 rounded-lg border border-sky-300 text-sm font-medium text-sky-700 hover:bg-sky-50 touch-manipulation active:scale-95"
+                >
+                  <Phone className="size-4" /> {c.phone}
+                </a>
+              ) : (
+                <span className="text-xs text-slate-400">ไม่มีเบอร์โทร</span>
+              )}
+              <CopyMessageButton name={c.name} items={c.lastItems} />
+            </div>
           </div>
         ))}
         {shown.length === 0 && (
