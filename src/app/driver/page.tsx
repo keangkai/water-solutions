@@ -23,6 +23,7 @@ export default async function DriverPage({ searchParams }: { searchParams: Promi
     where: {
       deliveryDate: { gte: new Date(date), lt: new Date(shiftDateKey(date, 1)) },
       status: { in: ["CONFIRMED", "DELIVERED", "FAILED"] },
+      deletedAt: null,
     },
     orderBy: { createdAt: "asc" },
     include: { partner: true, warehouse: true, lines: { include: { product: true } } },

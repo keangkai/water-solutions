@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { Pencil, Phone, MapPin, Warehouse as WarehouseIcon, AlertTriangle } from "lucide-react";
-import { cancelOrder, confirmDeliveredByAdmin, setOrderPaid } from "./actions";
+import { cancelOrder, confirmDeliveredByAdmin, deleteOrder, restoreOrder, setOrderPaid } from "./actions";
 import { OrderForm, type OrderCustomer, type OrderProduct, type OrderWarehouse } from "./order-form";
 import { formatDate } from "@/lib/format-date";
 import { LinkifiedText } from "@/components/linkified-text";
@@ -25,6 +25,7 @@ export type OrderCardData = {
   issueReason: string | null;
   deliveredAt: Date | null;
   paidAt: Date | null;
+  deletedAt: Date | null;
   partner: {
     name: string;
     companyName: string | null;
@@ -68,6 +69,7 @@ export function OrderCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   // ยืนยันแทนคนขับ: เลือกแบบ (ส่งแล้ว / ส่งแล้ว+โอนแล้ว) แล้วต้องกดยืนยันอีกครั้ง
   const [confirmingDeliver, setConfirmingDeliver] = useState<"delivered" | "paid" | null>(null);
   const [deliverError, setDeliverError] = useState<string | null>(null);
@@ -102,7 +104,8 @@ export function OrderCard({
   }
 
   const status = orderStatusInfo[order.status];
-  const isOpen = order.status === "CONFIRMED" || order.status === "FAILED";
+  const isDeleted = order.deletedAt != null;
+  const isOpen = !isDeleted && (order.status === "CONFIRMED" || order.status === "FAILED");
   const isDelivered = order.status === "DELIVERED";
   // ยอดโอนคิดจากจำนวนที่ส่งจริงเมื่อส่งแล้ว
   const total = order.lines.reduce(
@@ -117,6 +120,11 @@ export function OrderCard({
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <span className={`text-xs px-2 py-0.5 rounded-full border ${status.badge}`}>{status.label}</span>
+            {order.deletedAt && (
+              <span className="text-xs px-2 py-0.5 rounded-full border bg-slate-100 text-slate-600 border-slate-200">
+                ลบเมื่อ {formatDate(order.deletedAt)}
+              </span>
+            )}
             <span className="text-xs text-slate-500">
               สั่ง {formatDate(order.orderDate)} · ส่ง {formatDate(order.deliveryDate)} · รอบ {roundLabel(order.deliveryRound)}
             </span>
@@ -297,6 +305,36 @@ export function OrderCard({
                 ยกเลิกออเดอร์
               </button>
             ))}
+          {isDeleted ? (
+            <form action={restoreOrder.bind(null, order.id)}>
+              <button className="text-sm text-sky-600 hover:text-sky-700 border border-sky-300 rounded-lg px-3 min-h-[44px] touch-manipulation active:scale-95">
+                กู้คืนออเดอร์
+              </button>
+            </form>
+          ) : (
+            order.status !== "DELIVERED" &&
+            (confirmingDelete ? (
+              <form action={deleteOrder.bind(null, order.id)} className="flex flex-wrap items-center gap-2">
+                <button className="text-sm text-white bg-red-600 hover:bg-red-700 rounded-lg px-3 min-h-[44px] touch-manipulation">
+                  ย้ายเข้าถังขยะ
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmingDelete(false)}
+                  className="text-sm text-slate-500 hover:text-slate-700 min-h-[44px] px-1"
+                >
+                  ไม่ลบ
+                </button>
+              </form>
+            ) : (
+              <button
+                onClick={() => setConfirmingDelete(true)}
+                className="text-sm text-slate-500 hover:text-red-600 min-h-[44px] px-1"
+              >
+                ลบออเดอร์
+              </button>
+            ))
+          )}
         </div>
       </div>
     </div>

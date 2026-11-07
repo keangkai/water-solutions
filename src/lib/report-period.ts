@@ -93,7 +93,7 @@ export async function buildPeriodReport(view: PeriodView, key: string): Promise<
       include: { partner: true, order: { select: { id: true } }, lines: { include: { product: true } } },
     }),
     prisma.order.findMany({
-      where: { status: { not: "CANCELLED" } },
+      where: { status: { not: "CANCELLED" }, deletedAt: null },
       include: { partner: true, lines: { include: { product: true } } },
     }),
     prisma.expense.findMany(),

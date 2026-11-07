@@ -10,7 +10,7 @@ export async function getStockSnapshot() {
       select: { productId: true, quantity: true, movement: { select: { type: true, warehouseId: true } } },
     }),
     prisma.orderLine.findMany({
-      where: { order: { status: "CONFIRMED" } },
+      where: { order: { status: "CONFIRMED", deletedAt: null } },
       select: { productId: true, quantity: true, order: { select: { warehouseId: true } } },
     }),
     prisma.transferLine.findMany({

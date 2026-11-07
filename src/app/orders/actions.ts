@@ -69,7 +69,7 @@ export async function updateOrder(id: string, formData: FormData) {
   const parsed = parseOrder(formData);
   if (!parsed) return;
 
-  const order = await prisma.order.findUnique({ where: { id } });
+  const order = await prisma.order.findFirst({ where: { id, deletedAt: null } });
   if (!order || (order.status !== "CONFIRMED" && order.status !== "FAILED")) return;
   if (!(await warehouseUsable(parsed.data.warehouseId, order.warehouseId))) return;
 
@@ -89,7 +89,7 @@ export async function cancelOrder(id: string, formData?: FormData) {
   if ((await currentRole()) !== "admin") return;
 
   const { count } = await prisma.order.updateMany({
-    where: { id, status: { in: ["CONFIRMED", "FAILED"] } },
+    where: { id, deletedAt: null, status: { in: ["CONFIRMED", "FAILED"] } },
     data: { status: "CANCELLED" },
   });
 
@@ -106,12 +106,30 @@ export async function cancelOrder(id: string, formData?: FormData) {
   revalidateOrderPaths();
 }
 
+// ลบออเดอร์แบบ soft delete: ย้ายเข้าถังขยะ (กู้คืนได้) ลบได้เฉพาะที่ยังไม่ส่ง เพราะที่ส่งแล้วมีใบขายออกและยอดเงินผูกอยู่
+export async function deleteOrder(id: string) {
+  if ((await currentRole()) !== "admin") return;
+  await prisma.order.updateMany({
+    where: { id, deletedAt: null, status: { in: ["CONFIRMED", "FAILED", "CANCELLED"] } },
+    data: { deletedAt: new Date() },
+  });
+  revalidateOrderPaths();
+  revalidatePath("/");
+}
+
+export async function restoreOrder(id: string) {
+  if ((await currentRole()) !== "admin") return;
+  await prisma.order.updateMany({ where: { id, deletedAt: { not: null } }, data: { deletedAt: null } });
+  revalidateOrderPaths();
+  revalidatePath("/");
+}
+
 // admin ยืนยันว่าลูกค้าโอนเงินเข้าบัญชีแล้ว หลังส่งของเสร็จ
 export async function setOrderPaid(id: string, paid: boolean) {
   if ((await currentRole()) !== "admin") return;
 
   await prisma.order.updateMany({
-    where: { id, status: "DELIVERED" },
+    where: { id, status: "DELIVERED", deletedAt: null },
     data: { paidAt: paid ? new Date() : null },
   });
 

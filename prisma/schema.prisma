@@ -165,6 +165,7 @@ model Order {
   issueReason     String? // เหตุผลที่ส่งไม่ครบหรือส่งไม่ได้ เช่น แพ็คน้ำแตก
   deliveredAt     DateTime?
   paidAt          DateTime? // admin ยืนยันว่าลูกค้าโอนแล้ว
+  deletedAt       DateTime? // soft delete: ไม่ว่าง = ออเดอร์อยู่ในถังขยะ ไม่ถูกนับในหน้าอื่น กู้คืนได้
   movement        Movement?          @relation(fields: [movementId], references: [id], onDelete: SetNull)
   movementId      String?            @unique
   lines           OrderLine[]

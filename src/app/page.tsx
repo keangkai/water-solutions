@@ -24,7 +24,7 @@ export default async function Home() {
     getStockSnapshot(),
     // ออเดอร์ที่ admin ต้องตามต่อ: ยังไม่ส่ง ส่งไม่ได้ หรือส่งแล้วรอโอน
     prisma.order.findMany({
-      where: { OR: [{ status: { in: ["CONFIRMED", "FAILED"] } }, { status: "DELIVERED", paidAt: null }] },
+      where: { deletedAt: null, OR: [{ status: { in: ["CONFIRMED", "FAILED"] } }, { status: "DELIVERED", paidAt: null }] },
       include: { lines: true },
     }),
   ]);
