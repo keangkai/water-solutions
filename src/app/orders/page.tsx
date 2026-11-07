@@ -15,6 +15,7 @@ const tabs = {
   unpaid: { label: "ส่งแล้ว รอโอน", empty: "ไม่มีออเดอร์ที่รอโอน" },
   done: { label: "โอนแล้ว", empty: "ยังไม่มีออเดอร์ที่โอนแล้ว" },
   cancelled: { label: "ยกเลิก", empty: "ไม่มีออเดอร์ที่ยกเลิก" },
+  trash: { label: "ถังขยะ", empty: "ถังขยะว่าง" },
 } as const;
 type TabKey = keyof typeof tabs;
 
@@ -57,7 +58,7 @@ export default async function OrdersPage({
   const since = new Date(shiftDateKey(today, -90)).getTime();
   const usage = new Map<string, { count: number; last: number }>();
   for (const o of allFetched) {
-    if (o.status === "CANCELLED" || o.createdAt.getTime() < since) continue;
+    if (o.deletedAt || o.status === "CANCELLED" || o.createdAt.getTime() < since) continue;
     const u = usage.get(o.partnerId) ?? { count: 0, last: 0 };
     usage.set(o.partnerId, { count: u.count + 1, last: Math.max(u.last, o.createdAt.getTime()) });
   }
@@ -75,15 +76,18 @@ export default async function OrdersPage({
       [o.partner.name, o.partner.companyName, o.partner.facebookName, o.partner.phone].some((v) => v?.toLowerCase().includes(needle)));
   orders = orders.filter(matches);
 
+  // ออเดอร์ที่ถูกลบ (soft delete) อยู่ในแท็บถังขยะเท่านั้น
+  const live = orders.filter((o) => !o.deletedAt);
   const byTab: Record<TabKey, typeof orders> = {
-    pending: orders.filter((o) => o.status === "CONFIRMED" || o.status === "FAILED"),
-    unpaid: orders.filter((o) => o.status === "DELIVERED" && !o.paidAt),
+    pending: live.filter((o) => o.status === "CONFIRMED" || o.status === "FAILED"),
+    unpaid: live.filter((o) => o.status === "DELIVERED" && !o.paidAt),
     // ที่จบแล้วเรียงล่าสุดก่อน
-    done: orders.filter((o) => o.status === "DELIVERED" && o.paidAt).reverse(),
-    cancelled: orders.filter((o) => o.status === "CANCELLED").reverse(),
+    done: live.filter((o) => o.status === "DELIVERED" && o.paidAt).reverse(),
+    cancelled: live.filter((o) => o.status === "CANCELLED").reverse(),
+    trash: orders.filter((o) => o.deletedAt).sort((a, b) => b.deletedAt!.getTime() - a.deletedAt!.getTime()),
   };
   const visible = byTab[tab];
-  const failedCount = allFetched.filter((o) => o.status === "FAILED").length;
+  const failedCount = allFetched.filter((o) => o.status === "FAILED" && !o.deletedAt).length;
 
   // เพิ่งเพิ่มลูกค้ามาจากหน้าเพิ่มลูกค้า: เลือกลูกค้าคนนั้นไว้ให้ในฟอร์ม
   const justAdded = customers.find((c) => c.id === params.customer);

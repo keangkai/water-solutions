@@ -63,7 +63,7 @@ export async function importOrders(_: unknown, formData: FormData): Promise<Impo
 
   const orderKey = (partnerId: string, delivery: string, order: string, qty: number) => `${partnerId}|${delivery}|${order}|${qty}`;
   const existingOrders = await prisma.order.findMany({
-    where: { status: { not: "CANCELLED" } },
+    where: { status: { not: "CANCELLED" }, deletedAt: null },
     select: { partnerId: true, deliveryDate: true, orderDate: true, lines: { select: { quantity: true } } },
   });
   const seen = new Set(

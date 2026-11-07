@@ -25,7 +25,7 @@ export async function deliverOrder(id: string, formData: FormData): Promise<Resu
   const role = await currentRole();
   if (!role) return { error: "กรุณาเข้าสู่ระบบใหม่" };
 
-  const order = await prisma.order.findUnique({ where: { id }, include: { lines: true } });
+  const order = await prisma.order.findFirst({ where: { id, deletedAt: null }, include: { lines: true } });
   // admin ยืนยันย้อนหลังได้แม้คนขับเคยกด "ส่งไม่ได้" (เช่น ส่งได้ในภายหลัง) คนขับกดได้เฉพาะงานที่ยังรอส่ง
   const allowed = role === "admin" ? ["CONFIRMED", "FAILED"] : ["CONFIRMED"];
   if (!order || !allowed.includes(order.status)) return { error: "ออเดอร์นี้ถูกบันทึกไปแล้ว รีเฟรชหน้าเพื่อดูสถานะล่าสุด" };
@@ -73,7 +73,7 @@ export async function deliverOrder(id: string, formData: FormData): Promise<Resu
     await prisma.$transaction([
       // where มีสถานะด้วย กันกดส่งซ้ำแล้วได้ใบขายออกสองใบ
       prisma.order.update({
-        where: { id, status: order.status },
+        where: { id, status: order.status, deletedAt: null },
         data: {
           status: "DELIVERED",
           deliveredAt: new Date(),
@@ -114,7 +114,7 @@ export async function failOrder(id: string, formData: FormData): Promise<Result>
   if (!reason) return { error: "ต้องใส่เหตุผลที่ส่งไม่ได้" };
 
   const { count } = await prisma.order.updateMany({
-    where: { id, status: "CONFIRMED" },
+    where: { id, status: "CONFIRMED", deletedAt: null },
     data: { status: "FAILED", issueReason: reason },
   });
   if (count === 0) return { error: "ออเดอร์นี้ถูกบันทึกไปแล้ว รีเฟรชหน้าเพื่อดูสถานะล่าสุด" };
